@@ -19,8 +19,8 @@ export const recordPurchase = (data) => {
     quantity: Number(data.quantity),
     buyPrice: Number(data.buyPrice) || product.buyPrice,
     totalCost: (Number(data.buyPrice) || product.buyPrice) * Number(data.quantity),
-    supplier: data.supplier || '',
-    note: data.note || '',
+    quality: data.quality || '',
+    remark: data.remark || '',
     date: data.date || new Date().toISOString(),
   };
 

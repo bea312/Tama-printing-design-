@@ -26,7 +26,7 @@ const CustomTooltip = ({ active, payload, label }) => {
   );
 };
 
-export default function SalesChart({ data }) {
+export default function SalesChart({ data, revenueLabel = 'Revenue', profitLabel = 'Profit' }) {
   return (
     <ResponsiveContainer width="100%" height={280}>
       <AreaChart data={data} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
@@ -45,8 +45,8 @@ export default function SalesChart({ data }) {
         <YAxis tick={{ fill: 'var(--text-muted)', fontSize: 11 }} axisLine={false} tickLine={false} tickFormatter={(v) => `${(v / 1000).toFixed(0)}k`} />
         <Tooltip content={<CustomTooltip />} />
         <Legend wrapperStyle={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }} />
-        <Area type="monotone" dataKey="revenue" name="Revenue" stroke="#3b82f6" strokeWidth={2} fill="url(#revenue)" dot={false} activeDot={{ r: 4, fill: '#3b82f6' }} />
-        <Area type="monotone" dataKey="profit" name="Profit" stroke="#10b981" strokeWidth={2} fill="url(#profit)" dot={false} activeDot={{ r: 4, fill: '#10b981' }} />
+        <Area type="monotone" dataKey="revenue" name={revenueLabel} stroke="#3b82f6" strokeWidth={2} fill="url(#revenue)" dot={false} activeDot={{ r: 4, fill: '#3b82f6' }} />
+        <Area type="monotone" dataKey="profit" name={profitLabel} stroke="#10b981" strokeWidth={2} fill="url(#profit)" dot={false} activeDot={{ r: 4, fill: '#10b981' }} />
       </AreaChart>
     </ResponsiveContainer>
   );

@@ -1,5 +1,7 @@
 import { getProducts as _getProducts, saveProducts } from './storage';
-import { generateId } from '../utils/helpers';
+import { generateId, CATEGORIES } from '../utils/helpers';
+
+const safeCategory = (cat) => cat && cat.trim() ? cat.trim() : CATEGORIES[CATEGORIES.length - 1];
 
 export const getProducts = () => _getProducts();
 export const getAllProducts = () => _getProducts();
@@ -9,7 +11,7 @@ export const addProduct = (data) => {
   const product = {
     id: generateId(),
     name: data.name.trim(),
-    category: data.category,
+    category: safeCategory(data.category),
     buyPrice: Number(data.buyPrice),
     sellPrice: Number(data.sellPrice),
     quantity: Number(data.quantity) || 0,
@@ -28,7 +30,7 @@ export const updateProduct = (id, data) => {
   products[idx] = {
     ...products[idx],
     name: data.name.trim(),
-    category: data.category,
+    category: safeCategory(data.category),
     buyPrice: Number(data.buyPrice),
     sellPrice: Number(data.sellPrice),
     minStock: Number(data.minStock) || 5,

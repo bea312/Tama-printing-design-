@@ -1,6 +1,6 @@
 import * as XLSX from 'xlsx';
 import { saveAs } from 'file-saver';
-import { formatDate, formatCurrency } from '../utils/helpers';
+import { formatDate } from '../utils/helpers';
 
 export const exportToCSV = (data, filename) => {
   const ws = XLSX.utils.json_to_sheet(data);
@@ -28,8 +28,11 @@ export const exportSales = (sales, format = 'excel') => {
     'Revenue (RWF)': s.totalRevenue,
     'Cost (RWF)': s.totalCost,
     'Profit (RWF)': s.profit,
-    Customer: s.customerName || '',
-    Note: s.note || '',
+    Quality: s.quality || '',
+    Remark: s.remark || '',
+    Payment: s.paymentMethod === 'momo' ? 'MoMo' : 'Cash',
+    'Amount Paid (RWF)': s.amountPaid ?? s.totalRevenue,
+    'Balance (RWF)': s.totalRevenue - (s.amountPaid ?? s.totalRevenue),
   }));
   const name = `TPD_Sales_${new Date().toISOString().slice(0, 10)}`;
   if (format === 'csv') exportToCSV(rows, name);
@@ -44,12 +47,24 @@ export const exportPurchases = (purchases, format = 'excel') => {
     Qty: p.quantity,
     'Unit Cost (RWF)': p.buyPrice,
     'Total Cost (RWF)': p.totalCost,
-    Supplier: p.supplier || '',
-    Note: p.note || '',
+    Quality: p.quality || '',
+    Remark: p.remark || '',
   }));
   const name = `TPD_Purchases_${new Date().toISOString().slice(0, 10)}`;
   if (format === 'csv') exportToCSV(rows, name);
   else exportToExcel(rows, name, 'Purchases');
+};
+
+export const exportExpenses = (expenses, format = 'excel') => {
+  const rows = expenses.map((e) => ({
+    Date: formatDate(e.date),
+    Category: e.category,
+    Remark: e.remark || '',
+    'Amount (RWF)': e.amount,
+  }));
+  const name = `TPD_Expenses_${new Date().toISOString().slice(0, 10)}`;
+  if (format === 'csv') exportToCSV(rows, name);
+  else exportToExcel(rows, name, 'Expenses');
 };
 
 export const exportInventory = (products, format = 'excel') => {
@@ -62,6 +77,7 @@ export const exportInventory = (products, format = 'excel') => {
     'Min Stock': p.minStock,
     Status: p.quantity <= 0 ? 'Out of Stock' : p.quantity <= p.minStock ? 'Low Stock' : 'In Stock',
     'Stock Value (RWF)': p.buyPrice * p.quantity,
+    Remark: p.latestRemark || '',
   }));
   const name = `TPD_Inventory_${new Date().toISOString().slice(0, 10)}`;
   if (format === 'csv') exportToCSV(rows, name);

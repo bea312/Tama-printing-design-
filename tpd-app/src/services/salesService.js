@@ -14,6 +14,9 @@ export const recordSale = (data) => {
   const ok = decrementStock(data.productId, data.quantity);
   if (!ok) throw new Error('Failed to update stock');
 
+  const totalRevenue = product.sellPrice * Number(data.quantity);
+  const amountPaid = data.amountPaid !== '' && data.amountPaid != null ? Number(data.amountPaid) : totalRevenue;
+
   const sale = {
     id: generateId(),
     productId: data.productId,
@@ -22,11 +25,13 @@ export const recordSale = (data) => {
     quantity: Number(data.quantity),
     sellPrice: product.sellPrice,
     buyPrice: product.buyPrice,
-    totalRevenue: product.sellPrice * Number(data.quantity),
+    totalRevenue,
     totalCost: product.buyPrice * Number(data.quantity),
     profit: (product.sellPrice - product.buyPrice) * Number(data.quantity),
-    customerName: data.customerName || '',
-    note: data.note || '',
+    quality: data.quality || '',
+    remark: data.remark || '',
+    paymentMethod: data.paymentMethod || 'cash',
+    amountPaid,
     date: data.date || new Date().toISOString(),
   };
 

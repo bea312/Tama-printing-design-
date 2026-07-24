@@ -6,15 +6,25 @@ export const formatCurrency = (amount) => {
   }).format(amount || 0);
 };
 
+/* Date-only strings ("YYYY-MM-DD") from <input type="date"> mean a calendar day,
+   not a UTC instant — parsing them with `new Date()` shifts them to the wrong day
+   in any timezone behind UTC. Parse the components as local time instead. */
+export const parseLocalDate = (dateStr) => {
+  if (!dateStr) return new Date(NaN);
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(dateStr);
+  if (m) return new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3]));
+  return new Date(dateStr);
+};
+
 export const formatDate = (dateStr) => {
   if (!dateStr) return '—';
-  const d = new Date(dateStr);
+  const d = parseLocalDate(dateStr);
   return d.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
 };
 
 export const formatDateTime = (dateStr) => {
   if (!dateStr) return '—';
-  const d = new Date(dateStr);
+  const d = parseLocalDate(dateStr);
   return d.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' });
 };
 
@@ -52,13 +62,13 @@ export const filterByDateRange = (items, range, dateField = 'date') => {
   else if (range === 'month') { start.setMonth(now.getMonth() - 1); }
   else if (range === 'year') { start.setFullYear(now.getFullYear() - 1); }
   else return items;
-  return items.filter((i) => new Date(i[dateField]) >= start);
+  return items.filter((i) => parseLocalDate(i[dateField]) >= start);
 };
 
 export const groupByDate = (items, dateField = 'date') => {
   const groups = {};
   items.forEach((item) => {
-    const key = new Date(item[dateField]).toLocaleDateString('en-GB', { day: '2-digit', month: 'short' });
+    const key = parseLocalDate(item[dateField]).toLocaleDateString('en-GB', { day: '2-digit', month: 'short' });
     if (!groups[key]) groups[key] = [];
     groups[key].push(item);
   });
@@ -74,5 +84,17 @@ export const CATEGORIES = [
   'Envelopes & Folders',
   'Pens & Markers',
   'Labels & Stickers',
+  'Other',
+];
+
+export const EXPENSE_CATEGORIES = [
+  'Rent',
+  'Electricity',
+  'Water',
+  'Transport',
+  'Salaries',
+  'Internet & Airtime',
+  'Maintenance & Repairs',
+  'Office Supplies',
   'Other',
 ];

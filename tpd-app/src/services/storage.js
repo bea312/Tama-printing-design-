@@ -4,7 +4,9 @@ const KEYS = {
   PRODUCTS: 'tpd_products',
   SALES: 'tpd_sales',
   PURCHASES: 'tpd_purchases',
+  EXPENSES: 'tpd_expenses',
   AUTH: 'tpd_auth',
+  USERS: 'tpd_users',
 };
 
 const get = (key) => {
@@ -24,24 +26,36 @@ const set = (key, value) => {
   }
 };
 
-export const getProducts = () => get(KEYS.PRODUCTS) || [];
-export const saveProducts = (products) => set(KEYS.PRODUCTS, products);
+/* Per-account data namespace — each email keeps its own products/sales/purchases */
+let accountNamespace = null;
+export const setActiveAccount = (email) => { accountNamespace = email || null; };
+const nsKey = (key) => (accountNamespace ? `${key}::${accountNamespace}` : key);
 
-export const getSales = () => get(KEYS.SALES) || [];
-export const saveSales = (sales) => set(KEYS.SALES, sales);
+export const getProducts = () => get(nsKey(KEYS.PRODUCTS)) || [];
+export const saveProducts = (products) => set(nsKey(KEYS.PRODUCTS), products);
 
-export const getPurchases = () => get(KEYS.PURCHASES) || [];
-export const savePurchases = (purchases) => set(KEYS.PURCHASES, purchases);
+export const getSales = () => get(nsKey(KEYS.SALES)) || [];
+export const saveSales = (sales) => set(nsKey(KEYS.SALES), sales);
+
+export const getPurchases = () => get(nsKey(KEYS.PURCHASES)) || [];
+export const savePurchases = (purchases) => set(nsKey(KEYS.PURCHASES), purchases);
+
+export const getExpenses = () => get(nsKey(KEYS.EXPENSES)) || [];
+export const saveExpenses = (expenses) => set(nsKey(KEYS.EXPENSES), expenses);
 
 export const getAuth = () => get(KEYS.AUTH);
 export const saveAuth = (auth) => set(KEYS.AUTH, auth);
 export const clearAuth = () => localStorage.removeItem(KEYS.AUTH);
 
-/* Wipe all product/sales/purchase data (keep auth) */
+export const getUsers = () => get(KEYS.USERS) || [];
+export const saveUsers = (users) => set(KEYS.USERS, users);
+
+/* Wipe all product/sales/purchase/expense data for the active account (keep auth & other accounts) */
 export const clearAllData = () => {
-  localStorage.removeItem(KEYS.PRODUCTS);
-  localStorage.removeItem(KEYS.SALES);
-  localStorage.removeItem(KEYS.PURCHASES);
+  localStorage.removeItem(nsKey(KEYS.PRODUCTS));
+  localStorage.removeItem(nsKey(KEYS.SALES));
+  localStorage.removeItem(nsKey(KEYS.PURCHASES));
+  localStorage.removeItem(nsKey(KEYS.EXPENSES));
 };
 
 export const seedDemoData = () => {

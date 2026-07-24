@@ -1,14 +1,17 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { Eye, EyeOff, Printer, Lock, User, AlertCircle } from 'lucide-react';
+import { useLanguage } from '../context/LanguageContext';
+import { Eye, EyeOff, Printer, Lock, Mail, AlertCircle, ArrowLeft } from 'lucide-react';
+import ThemeLangSwitcher from '../components/common/ThemeLangSwitcher';
 
 export default function Login() {
-  const [form, setForm] = useState({ username: '', password: '' });
+  const [form, setForm] = useState({ email: '', password: '' });
   const [showPass, setShowPass] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const { login } = useAuth();
+  const { t } = useLanguage();
   const navigate = useNavigate();
 
   const handleSubmit = async (e) => {
@@ -16,12 +19,12 @@ export default function Login() {
     setError('');
     setLoading(true);
     await new Promise((r) => setTimeout(r, 600));
-    const result = login(form.username, form.password);
+    const result = login(form.email, form.password);
     setLoading(false);
     if (result.success) {
       navigate('/', { replace: true });
     } else {
-      setError(result.error);
+      setError(t(`login.errors.${result.error}`));
     }
   };
 
@@ -36,6 +39,22 @@ export default function Login() {
       position: 'relative',
       overflow: 'hidden',
     }}>
+      <div style={{ position: 'absolute', top: '16px', right: '16px', zIndex: 2 }}>
+        <ThemeLangSwitcher compact />
+      </div>
+      <Link
+        to="/"
+        style={{
+          position: 'absolute', top: '16px', left: '16px', zIndex: 2,
+          display: 'flex', alignItems: 'center', gap: '6px',
+          height: '36px', padding: '0 14px', borderRadius: 'var(--radius-md)',
+          background: 'var(--bg-input)', border: '1px solid var(--border-color)',
+          color: 'var(--text-secondary)', fontSize: '0.85rem', fontWeight: 500,
+          textDecoration: 'none',
+        }}
+      >
+        <ArrowLeft size={16} /> {t('login.backToHome')}
+      </Link>
       {/* Background decorations */}
       <div style={{ position: 'absolute', top: '-150px', left: '-150px', width: '400px', height: '400px', borderRadius: '50%', background: 'rgba(37,99,235,0.08)', filter: 'blur(60px)', pointerEvents: 'none' }} />
       <div style={{ position: 'absolute', bottom: '-100px', right: '-100px', width: '300px', height: '300px', borderRadius: '50%', background: 'rgba(16,185,129,0.06)', filter: 'blur(60px)', pointerEvents: 'none' }} />
@@ -59,7 +78,7 @@ export default function Login() {
           <h1 style={{ fontSize: '1.6rem', fontWeight: 800, fontFamily: 'Poppins, sans-serif', color: 'var(--text-primary)', margin: '0 0 4px' }}>
             Tama Printing Design
           </h1>
-          <p style={{ color: 'var(--text-muted)', fontSize: '0.875rem' }}>Stock Management System</p>
+          <p style={{ color: 'var(--text-muted)', fontSize: '0.875rem' }}>{t('login.tagline')}</p>
         </div>
 
         {/* Form card */}
@@ -70,8 +89,7 @@ export default function Login() {
           padding: '32px',
           boxShadow: 'var(--shadow-lg), var(--shadow-glow)',
         }}>
-          <h2 style={{ fontSize: '1.1rem', marginBottom: '6px', color: 'var(--text-primary)' }}>Welcome back</h2>
-          <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem', marginBottom: '24px' }}>Sign in to your admin account</p>
+          <h2 style={{ fontSize: '1.1rem', marginBottom: '24px', color: 'var(--text-primary)' }}>{t('login.welcome')}</h2>
 
           {error && (
             <div className="alert alert-danger">
@@ -82,24 +100,24 @@ export default function Login() {
 
           <form onSubmit={handleSubmit}>
             <div className="form-group">
-              <label className="form-label">Username</label>
+              <label className="form-label">{t('login.email')}</label>
               <div style={{ position: 'relative' }}>
-                <User size={16} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
+                <Mail size={16} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
                 <input
                   className="form-input"
                   style={{ paddingLeft: '38px' }}
-                  type="text"
-                  placeholder="admin"
-                  value={form.username}
-                  onChange={(e) => setForm({ ...form, username: e.target.value })}
+                  type="email"
+                  placeholder="you@example.com"
+                  value={form.email}
+                  onChange={(e) => setForm({ ...form, email: e.target.value })}
                   required
-                  autoComplete="username"
+                  autoComplete="email"
                 />
               </div>
             </div>
 
             <div className="form-group">
-              <label className="form-label">Password</label>
+              <label className="form-label">{t('login.password')}</label>
               <div style={{ position: 'relative' }}>
                 <Lock size={16} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
                 <input
@@ -131,20 +149,15 @@ export default function Login() {
               {loading ? (
                 <>
                   <span className="spinner" style={{ width: '16px', height: '16px', borderWidth: '2px' }} />
-                  Signing in…
+                  {t('login.signingIn')}
                 </>
-              ) : 'Sign In'}
+              ) : t('login.signIn')}
             </button>
           </form>
-
-          <div style={{ marginTop: '20px', padding: '14px', background: 'var(--bg-input)', borderRadius: 'var(--radius-md)', fontSize: '0.78rem', color: 'var(--text-muted)' }}>
-            <strong style={{ color: 'var(--text-secondary)' }}>Demo credentials:</strong><br />
-            Username: <code style={{ color: 'var(--brand-blue-light)' }}>admin</code> &nbsp;|&nbsp; Password: <code style={{ color: 'var(--brand-blue-light)' }}>tpd2024</code>
-          </div>
         </div>
 
         <p style={{ textAlign: 'center', marginTop: '20px', color: 'var(--text-muted)', fontSize: '0.78rem' }}>
-          © 2024 Tama Printing Design — All rights reserved
+          © 2026 {t('login.footer')}
         </p>
       </div>
     </div>

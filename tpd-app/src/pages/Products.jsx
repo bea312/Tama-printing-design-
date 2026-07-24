@@ -2,20 +2,22 @@ import { useState, useMemo, useRef } from 'react';
 import * as XLSX from 'xlsx';
 import { saveAs } from 'file-saver';
 import {
-  Plus, Search, Edit2, Trash2, Package, ArrowUpDown,
+  Plus, Search, Edit2, Trash2,
   Upload, Download, CheckCircle2, XCircle, FileSpreadsheet,
 } from 'lucide-react';
 import Header from '../components/common/Header';
 import Modal from '../components/common/Modal';
 import ConfirmDialog from '../components/common/ConfirmDialog';
+import SortTh from '../components/common/SortTh';
 import { useApp } from '../context/AppContext';
+import { useLanguage } from '../context/LanguageContext';
 import { addProduct, updateProduct, deleteProduct } from '../services/productService';
 import { formatCurrency, getStockStatus, CATEGORIES } from '../utils/helpers';
 
 const EMPTY = { name: '', category: CATEGORIES[0], buyPrice: '', sellPrice: '', quantity: '', minStock: '5' };
 
 /* ── Flexible column mapper ── */
-const normalise = (str) => String(str || '').toLowerCase().replace(/[\s_\-]/g, '');
+const normalise = (str) => String(str || '').toLowerCase().replace(/[\s_-]/g, '');
 
 const COL_MAP = {
   name:      ['name','productname','product','itemname','item','description'],
@@ -105,6 +107,7 @@ function downloadTemplate() {
 /* ══════════════════════════════════════════════════ */
 export default function Products() {
   const { products, refresh, addToast } = useApp();
+  const { t } = useLanguage();
 
   const [search,    setSearch]    = useState('');
   const [catFilter, setCatFilter] = useState('');
@@ -164,13 +167,13 @@ export default function Products() {
 
   const handleSave = () => {
     if (!validate()) return;
-    if (editing) { updateProduct(editing.id, form); addToast('Product updated', 'success'); }
-    else         { addProduct(form);                 addToast('Product added',   'success'); }
+    if (editing) { updateProduct(editing.id, form); addToast(t('products.productUpdated'), 'success'); }
+    else         { addProduct(form);                 addToast(t('products.productAdded'),   'success'); }
     refresh();
     setModal(false);
   };
 
-  const handleDelete = (id) => { deleteProduct(id); refresh(); addToast('Product deleted', 'info'); };
+  const handleDelete = (id) => { deleteProduct(id); refresh(); addToast(t('products.productDeleted'), 'info'); };
 
   /* ── Excel import handlers ── */
   const handleFileSelect = (e) => {
@@ -211,22 +214,13 @@ export default function Products() {
     if (sortKey === key) setSortAsc(!sortAsc); else { setSortKey(key); setSortAsc(true); }
   };
 
-  const SortTh = ({ k, label }) => (
-    <th style={{ cursor: 'pointer', userSelect: 'none' }} onClick={() => toggleSort(k)}>
-      <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-        {label}
-        <ArrowUpDown size={11} style={{ opacity: sortKey === k ? 1 : 0.3, color: sortKey === k ? 'var(--brand-blue-light)' : undefined }} />
-      </span>
-    </th>
-  );
-
   const validCount   = importRows.filter((r) => r.valid).length;
   const invalidCount = importRows.filter((r) => !r.valid).length;
 
   /* ══════════ RENDER ══════════ */
   return (
     <div>
-      <Header title="Products" subtitle="Manage your product catalog" />
+      <Header title={t('products.title')} subtitle={t('products.subtitle')} />
       <div className="page-wrapper">
 
         {/* ── Toolbar ── */}
@@ -234,10 +228,10 @@ export default function Products() {
           <div className="toolbar-left">
             <div className="search-bar" style={{ width: '260px' }}>
               <Search size={15} className="search-icon" />
-              <input placeholder="Search products…" value={search} onChange={(e) => setSearch(e.target.value)} />
+              <input placeholder={t('products.searchPlaceholder')} value={search} onChange={(e) => setSearch(e.target.value)} />
             </div>
             <select className="form-select" style={{ width: '180px', height: '40px' }} value={catFilter} onChange={(e) => setCatFilter(e.target.value)}>
-              <option value="">All Categories</option>
+              <option value="">{t('common.allCategories')}</option>
               {CATEGORIES.map((c) => <option key={c} value={c}>{c}</option>)}
             </select>
           </div>
@@ -245,7 +239,7 @@ export default function Products() {
           <div className="toolbar-right">
             {/* Download template */}
             <button className="btn btn-ghost" onClick={downloadTemplate} title="Download Excel template">
-              <Download size={15} /> Template
+              <Download size={15} /> {t('products.template')}
             </button>
 
             {/* Import Excel — hidden file input + visible button */}
@@ -262,12 +256,12 @@ export default function Products() {
               onClick={() => fileInputRef.current?.click()}
               title="Import products from Excel"
             >
-              <Upload size={15} /> Import Excel
+              <Upload size={15} /> {t('products.importExcel')}
             </button>
 
             {/* Add single product */}
             <button className="btn btn-primary" onClick={openAdd}>
-              <Plus size={16} /> Add Product
+              <Plus size={16} /> {t('products.addProduct')}
             </button>
           </div>
         </div>
@@ -278,14 +272,14 @@ export default function Products() {
             <table>
               <thead>
                 <tr>
-                  <SortTh k="name"      label="Product Name" />
-                  <th>Category</th>
-                  <SortTh k="buyPrice"  label="Buy Price" />
-                  <SortTh k="sellPrice" label="Sell Price" />
-                  <th>Margin</th>
-                  <SortTh k="quantity"  label="Stock" />
-                  <th>Status</th>
-                  <th style={{ textAlign: 'right' }}>Actions</th>
+                  <SortTh k="name"      label={t('products.productName')} sortKey={sortKey} onSort={toggleSort} />
+                  <th>{t('common.category')}</th>
+                  <SortTh k="buyPrice"  label={t('products.buyPrice')} sortKey={sortKey} onSort={toggleSort} />
+                  <SortTh k="sellPrice" label={t('products.sellPrice')} sortKey={sortKey} onSort={toggleSort} />
+                  <th>{t('products.margin')}</th>
+                  <SortTh k="quantity"  label={t('products.stock')} sortKey={sortKey} onSort={toggleSort} />
+                  <th>{t('common.status')}</th>
+                  <th style={{ textAlign: 'right' }}>{t('common.actions')}</th>
                 </tr>
               </thead>
               <tbody>
@@ -293,8 +287,8 @@ export default function Products() {
                   <tr><td colSpan={8}>
                     <div className="empty-state">
                       <FileSpreadsheet size={44} />
-                      <h3>No products yet</h3>
-                      <p>Click <strong>Add Product</strong> to add one, or <strong>Import Excel</strong> to upload your list</p>
+                      <h3>{t('products.noProductsYet')}</h3>
+                      <p>{t('products.clickAddProduct')}</p>
                     </div>
                   </td></tr>
                 ) : filtered.map((p) => {
@@ -303,7 +297,7 @@ export default function Products() {
                   return (
                     <tr key={p.id}>
                       <td style={{ fontWeight: 600 }}>{p.name}</td>
-                      <td><span className="badge badge-blue">{p.category.split(' ')[0]}</span></td>
+                      <td><span className="badge badge-blue">{(p.category || 'Other').split(' ')[0]}</span></td>
                       <td style={{ color: 'var(--text-secondary)' }}>{formatCurrency(p.buyPrice)}</td>
                       <td style={{ color: 'var(--accent-gold)', fontWeight: 600 }}>{formatCurrency(p.sellPrice)}</td>
                       <td><span style={{ color: 'var(--accent-green)', fontSize: '0.82rem', fontWeight: 600 }}>{margin}%</span></td>
@@ -316,8 +310,8 @@ export default function Products() {
                       <td><span className={`badge badge-${status.color}`}>{status.label}</span></td>
                       <td>
                         <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '6px' }}>
-                          <button className="btn btn-ghost btn-icon btn-sm" onClick={() => openEdit(p)} title="Edit"><Edit2 size={14} /></button>
-                          <button className="btn btn-ghost btn-icon btn-sm" onClick={() => setConfirmId(p.id)} title="Delete" style={{ color: 'var(--accent-red-light)' }}><Trash2 size={14} /></button>
+                          <button className="btn btn-ghost btn-icon btn-sm" onClick={() => openEdit(p)} title={t('common.edit')}><Edit2 size={14} /></button>
+                          <button className="btn btn-ghost btn-icon btn-sm" onClick={() => setConfirmId(p.id)} title={t('common.delete')} style={{ color: 'var(--accent-red-light)' }}><Trash2 size={14} /></button>
                         </div>
                       </td>
                     </tr>
@@ -327,59 +321,59 @@ export default function Products() {
             </table>
           </div>
           <div style={{ padding: '12px 16px', borderTop: '1px solid var(--border-color)', color: 'var(--text-muted)', fontSize: '0.8rem' }}>
-            Showing {filtered.length} of {products.length} products
+            {t('products.showing')} {filtered.length} {t('products.of')} {products.length} {t('inventory.products')}
           </div>
         </div>
       </div>
 
       {/* ══ Add / Edit Modal ══ */}
-      <Modal isOpen={modal} onClose={() => setModal(false)} title={editing ? 'Edit Product' : 'Add New Product'}>
+      <Modal isOpen={modal} onClose={() => setModal(false)} title={editing ? t('products.editProduct') : t('products.addNewProduct')}>
         <div className="grid-2">
           <div className="form-group" style={{ gridColumn: '1 / -1' }}>
-            <label className="form-label">Product Name *</label>
+            <label className="form-label">{t('products.productNameRequired')}</label>
             <input className="form-input" placeholder="e.g. A4 White Paper (500 sheets)" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
             {errors.name && <span style={{ color: 'var(--accent-red)', fontSize: '0.78rem' }}>{errors.name}</span>}
           </div>
           <div className="form-group" style={{ gridColumn: '1 / -1' }}>
-            <label className="form-label">Category</label>
+            <label className="form-label">{t('products.category')}</label>
             <select className="form-select" value={form.category} onChange={(e) => setForm({ ...form, category: e.target.value })}>
               {CATEGORIES.map((c) => <option key={c} value={c}>{c}</option>)}
             </select>
           </div>
           <div className="form-group">
-            <label className="form-label">Buy Price (RWF) *</label>
+            <label className="form-label">{t('products.buyPriceLabel')}</label>
             <input className="form-input" type="number" min="0" placeholder="2500" value={form.buyPrice} onChange={(e) => setForm({ ...form, buyPrice: e.target.value })} />
             {errors.buyPrice && <span style={{ color: 'var(--accent-red)', fontSize: '0.78rem' }}>{errors.buyPrice}</span>}
           </div>
           <div className="form-group">
-            <label className="form-label">Sell Price (RWF) *</label>
+            <label className="form-label">{t('products.sellPriceLabel')}</label>
             <input className="form-input" type="number" min="0" placeholder="3500" value={form.sellPrice} onChange={(e) => setForm({ ...form, sellPrice: e.target.value })} />
             {errors.sellPrice && <span style={{ color: 'var(--accent-red)', fontSize: '0.78rem' }}>{errors.sellPrice}</span>}
           </div>
           {!editing && (
             <div className="form-group">
-              <label className="form-label">Initial Quantity *</label>
+              <label className="form-label">{t('products.initialQuantity')}</label>
               <input className="form-input" type="number" min="0" placeholder="0" value={form.quantity} onChange={(e) => setForm({ ...form, quantity: e.target.value })} />
               {errors.quantity && <span style={{ color: 'var(--accent-red)', fontSize: '0.78rem' }}>{errors.quantity}</span>}
             </div>
           )}
           <div className="form-group">
-            <label className="form-label">Min Stock Alert</label>
+            <label className="form-label">{t('products.minStock')}</label>
             <input className="form-input" type="number" min="1" placeholder="5" value={form.minStock} onChange={(e) => setForm({ ...form, minStock: e.target.value })} />
           </div>
           {form.buyPrice && form.sellPrice && (
             <div style={{ gridColumn: '1 / -1', padding: '10px 12px', background: 'var(--bg-input)', borderRadius: 'var(--radius-md)', fontSize: '0.82rem' }}>
-              <span style={{ color: 'var(--text-secondary)' }}>Profit per unit: </span>
+              <span style={{ color: 'var(--text-secondary)' }}>{t('products.profitPerUnit')} </span>
               <span style={{ color: 'var(--accent-green)', fontWeight: 700 }}>{formatCurrency(Number(form.sellPrice) - Number(form.buyPrice))}</span>
               <span style={{ color: 'var(--text-muted)', marginLeft: '8px' }}>
-                ({form.sellPrice > 0 ? Math.round(((form.sellPrice - form.buyPrice) / form.sellPrice) * 100) : 0}% margin)
+                ({form.sellPrice > 0 ? Math.round(((form.sellPrice - form.buyPrice) / form.sellPrice) * 100) : 0}% {t('products.margin').toLowerCase()})
               </span>
             </div>
           )}
         </div>
         <div className="modal-footer">
-          <button className="btn btn-ghost" onClick={() => setModal(false)}>Cancel</button>
-          <button className="btn btn-primary" onClick={handleSave}>{editing ? 'Save Changes' : 'Add Product'}</button>
+          <button className="btn btn-ghost" onClick={() => setModal(false)}>{t('common.cancel')}</button>
+          <button className="btn btn-primary" onClick={handleSave}>{editing ? t('products.saveChanges') : t('products.addProduct')}</button>
         </div>
       </Modal>
 
@@ -416,7 +410,7 @@ export default function Products() {
         )}
 
         {/* Preview table */}
-        <div style={{ maxHeight: '300px', overflowY: 'auto', border: '1px solid var(--border-color)', borderRadius: 'var(--radius-md)' }}>
+        <div style={{ maxHeight: '300px', overflowY: 'auto', overflowX: 'auto', border: '1px solid var(--border-color)', borderRadius: 'var(--radius-md)' }}>
           <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.8rem' }}>
             <thead style={{ background: 'var(--bg-secondary)', position: 'sticky', top: 0 }}>
               <tr>
@@ -453,7 +447,7 @@ export default function Products() {
         </div>
 
         <div className="modal-footer">
-          <button className="btn btn-ghost" onClick={() => setImportModal(false)}>Cancel</button>
+          <button className="btn btn-ghost" onClick={() => setImportModal(false)}>{t('common.cancel')}</button>
           <button
             className="btn btn-success"
             onClick={handleImportConfirm}
@@ -469,8 +463,8 @@ export default function Products() {
         isOpen={!!confirmId}
         onClose={() => setConfirmId(null)}
         onConfirm={() => handleDelete(confirmId)}
-        title="Delete Product"
-        message="This will permanently delete the product. Sales history will remain. Are you sure?"
+        title={t('products.deleteProductTitle')}
+        message={t('products.deleteProductMessage')}
       />
     </div>
   );

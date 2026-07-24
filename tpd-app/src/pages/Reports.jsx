@@ -6,15 +6,16 @@ import {
 import { Download, BarChart3, TrendingUp, DollarSign, ShoppingCart } from 'lucide-react';
 import Header from '../components/common/Header';
 import { useApp } from '../context/AppContext';
+import { useLanguage } from '../context/LanguageContext';
 import { exportSales, exportPurchases } from '../services/exportService';
 import { formatCurrency, formatDate, filterByDateRange } from '../utils/helpers';
 
 const RANGES = [
-  { label: 'Today', value: 'today' },
-  { label: 'This Week', value: 'week' },
-  { label: 'This Month', value: 'month' },
-  { label: 'This Year', value: 'year' },
-  { label: 'All Time', value: 'all' },
+  { key: 'today', value: 'today' },
+  { key: 'thisWeek', value: 'week' },
+  { key: 'thisMonth', value: 'month' },
+  { key: 'thisYear', value: 'year' },
+  { key: 'allTime', value: 'all' },
 ];
 
 const ChartTooltip = ({ active, payload, label }) => {
@@ -35,21 +36,24 @@ const ChartTooltip = ({ active, payload, label }) => {
 
 export default function Reports() {
   const { sales, purchases } = useApp();
+  const { t } = useLanguage();
   const [range, setRange] = useState('month');
 
   const filteredSales = useMemo(() => filterByDateRange(sales, range), [sales, range]);
   const filteredPurchases = useMemo(() => filterByDateRange(purchases, range), [purchases, range]);
 
-  const summary = useMemo(() => ({
-    revenue: filteredSales.reduce((s, x) => s + x.totalRevenue, 0),
-    cost: filteredSales.reduce((s, x) => s + x.totalCost, 0),
-    profit: filteredSales.reduce((s, x) => s + x.profit, 0),
-    salesCount: filteredSales.length,
-    purchased: filteredPurchases.reduce((s, x) => s + x.totalCost, 0),
-    margin: 0,
-  }), [filteredSales, filteredPurchases]);
-
-  summary.margin = summary.revenue > 0 ? Math.round((summary.profit / summary.revenue) * 100) : 0;
+  const summary = useMemo(() => {
+    const revenue = filteredSales.reduce((s, x) => s + x.totalRevenue, 0);
+    const profit = filteredSales.reduce((s, x) => s + x.profit, 0);
+    return {
+      revenue,
+      cost: filteredSales.reduce((s, x) => s + x.totalCost, 0),
+      profit,
+      salesCount: filteredSales.length,
+      purchased: filteredPurchases.reduce((s, x) => s + x.totalCost, 0),
+      margin: revenue > 0 ? Math.round((profit / revenue) * 100) : 0,
+    };
+  }, [filteredSales, filteredPurchases]);
 
   /* Group sales by date for chart */
   const dailyData = useMemo(() => {
@@ -78,7 +82,7 @@ export default function Reports() {
 
   return (
     <div>
-      <Header title="Reports & Analytics" subtitle="Track performance and business insights" />
+      <Header title={t('reports.title')} subtitle={t('reports.subtitle')} />
       <div className="page-wrapper">
         {/* Range filter */}
         <div style={{ display: 'flex', gap: '8px', marginBottom: '24px', flexWrap: 'wrap' }}>
@@ -88,18 +92,18 @@ export default function Reports() {
               className={`btn ${range === r.value ? 'btn-primary' : 'btn-ghost'}`}
               onClick={() => setRange(r.value)}
             >
-              {r.label}
+              {t(`reports.${r.key}`)}
             </button>
           ))}
-          <div style={{ marginLeft: 'auto', display: 'flex', gap: '8px' }}>
+          <div style={{ marginLeft: 'auto', display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
             <button className="btn btn-ghost btn-sm" onClick={() => exportSales(filteredSales, 'csv')}>
-              <Download size={13} /> Sales CSV
+              <Download size={13} /> {t('reports.salesCsv')}
             </button>
             <button className="btn btn-ghost btn-sm" onClick={() => exportSales(filteredSales)}>
-              <Download size={13} /> Sales Excel
+              <Download size={13} /> {t('reports.salesExcel')}
             </button>
             <button className="btn btn-ghost btn-sm" onClick={() => exportPurchases(filteredPurchases)}>
-              <Download size={13} /> Purchases Excel
+              <Download size={13} /> {t('reports.purchasesExcel')}
             </button>
           </div>
         </div>
@@ -107,10 +111,10 @@ export default function Reports() {
         {/* KPI row */}
         <div className="grid-4" style={{ marginBottom: '24px' }}>
           {[
-            { label: 'Revenue', value: formatCurrency(summary.revenue), icon: DollarSign, color: 'gold' },
-            { label: 'Profit', value: formatCurrency(summary.profit), icon: TrendingUp, color: 'green' },
-            { label: 'Margin', value: `${summary.margin}%`, icon: BarChart3, color: 'blue' },
-            { label: 'Sales', value: summary.salesCount, icon: ShoppingCart, color: 'purple' },
+            { label: t('reports.revenue'), value: formatCurrency(summary.revenue), icon: DollarSign, color: 'gold' },
+            { label: t('reports.profit'), value: formatCurrency(summary.profit), icon: TrendingUp, color: 'green' },
+            { label: t('reports.margin'), value: `${summary.margin}%`, icon: BarChart3, color: 'blue' },
+            { label: t('reports.sales'), value: summary.salesCount, icon: ShoppingCart, color: 'purple' },
           ].map((k) => (
             <div key={k.label} className={`stat-card ${k.color}`}>
               <div className={`stat-icon ${k.color}`}><k.icon size={20} /></div>
@@ -123,8 +127,8 @@ export default function Reports() {
         {/* Revenue & Profit trend */}
         <div className="card" style={{ marginBottom: '20px' }}>
           <div className="card-header">
-            <span className="card-title">Revenue & Profit Trend</span>
-            <span style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>{RANGES.find((r) => r.value === range)?.label}</span>
+            <span className="card-title">{t('reports.revenueProfitTrend')}</span>
+            <span style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>{t(`reports.${RANGES.find((r) => r.value === range)?.key}`)}</span>
           </div>
           {dailyData.length > 0 ? (
             <ResponsiveContainer width="100%" height={260}>
@@ -134,12 +138,12 @@ export default function Reports() {
                 <YAxis tick={{ fill: 'var(--text-muted)', fontSize: 11 }} axisLine={false} tickLine={false} tickFormatter={(v) => `${(v / 1000).toFixed(0)}k`} />
                 <Tooltip content={<ChartTooltip />} />
                 <Legend wrapperStyle={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }} />
-                <Line type="monotone" dataKey="revenue" name="Revenue" stroke="#f59e0b" strokeWidth={2.5} dot={false} />
-                <Line type="monotone" dataKey="profit" name="Profit" stroke="#10b981" strokeWidth={2.5} dot={false} />
+                <Line type="monotone" dataKey="revenue" name={t('reports.revenue')} stroke="#f59e0b" strokeWidth={2.5} dot={false} />
+                <Line type="monotone" dataKey="profit" name={t('reports.profit')} stroke="#10b981" strokeWidth={2.5} dot={false} />
               </LineChart>
             </ResponsiveContainer>
           ) : (
-            <div className="empty-state" style={{ padding: '40px' }}><BarChart3 size={40} /><h3>No data for this period</h3></div>
+            <div className="empty-state" style={{ padding: '40px' }}><BarChart3 size={40} /><h3>{t('reports.noDataPeriod')}</h3></div>
           )}
         </div>
 
@@ -147,7 +151,7 @@ export default function Reports() {
         {topProducts.length > 0 && (
           <div className="card" style={{ marginBottom: '20px' }}>
             <div className="card-header">
-              <span className="card-title">Top Products by Revenue</span>
+              <span className="card-title">{t('reports.topProducts')}</span>
             </div>
             <ResponsiveContainer width="100%" height={240}>
               <BarChart data={topProducts} margin={{ top: 10, right: 10, left: 0, bottom: 0 }} barSize={28}>
@@ -156,8 +160,8 @@ export default function Reports() {
                 <YAxis tick={{ fill: 'var(--text-muted)', fontSize: 11 }} axisLine={false} tickLine={false} tickFormatter={(v) => `${(v / 1000).toFixed(0)}k`} />
                 <Tooltip content={<ChartTooltip />} />
                 <Legend wrapperStyle={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }} />
-                <Bar dataKey="revenue" name="Revenue" fill="#3b82f6" radius={[4, 4, 0, 0]} />
-                <Bar dataKey="profit" name="Profit" fill="#10b981" radius={[4, 4, 0, 0]} />
+                <Bar dataKey="revenue" name={t('reports.revenue')} fill="#3b82f6" radius={[4, 4, 0, 0]} />
+                <Bar dataKey="profit" name={t('reports.profit')} fill="#10b981" radius={[4, 4, 0, 0]} />
               </BarChart>
             </ResponsiveContainer>
           </div>
@@ -166,26 +170,26 @@ export default function Reports() {
         {/* Detailed sales table */}
         <div className="card" style={{ padding: 0 }}>
           <div className="card-header" style={{ padding: '16px 20px' }}>
-            <span className="card-title">Sales Detail</span>
-            <span style={{ color: 'var(--text-muted)', fontSize: '0.8rem' }}>{filteredSales.length} records</span>
+            <span className="card-title">{t('reports.salesDetail')}</span>
+            <span style={{ color: 'var(--text-muted)', fontSize: '0.8rem' }}>{filteredSales.length} {t('reports.records')}</span>
           </div>
           <div className="table-container">
             <table>
               <thead>
                 <tr>
-                  <th>Product</th>
-                  <th>Qty</th>
-                  <th>Revenue</th>
-                  <th>Cost</th>
-                  <th>Profit</th>
-                  <th>Margin</th>
-                  <th>Customer</th>
-                  <th>Date</th>
+                  <th>{t('common.product')}</th>
+                  <th>{t('reports.qty')}</th>
+                  <th>{t('reports.revenue')}</th>
+                  <th>{t('reports.cost')}</th>
+                  <th>{t('reports.profit')}</th>
+                  <th>{t('reports.margin')}</th>
+                  <th>{t('stockOut.quality')}</th>
+                  <th>{t('common.date')}</th>
                 </tr>
               </thead>
               <tbody>
                 {filteredSales.length === 0 ? (
-                  <tr><td colSpan={8}><div className="empty-state" style={{ padding: '40px' }}><ShoppingCart size={36} /><h3>No sales in this period</h3></div></td></tr>
+                  <tr><td colSpan={8}><div className="empty-state" style={{ padding: '40px' }}><ShoppingCart size={36} /><h3>{t('reports.noSalesPeriod')}</h3></div></td></tr>
                 ) : [...filteredSales].sort((a, b) => new Date(b.date) - new Date(a.date)).map((s) => {
                   const m = s.totalRevenue > 0 ? Math.round((s.profit / s.totalRevenue) * 100) : 0;
                   return (
@@ -196,7 +200,7 @@ export default function Reports() {
                       <td style={{ color: 'var(--text-secondary)' }}>{formatCurrency(s.totalCost)}</td>
                       <td style={{ color: 'var(--accent-green)', fontWeight: 700 }}>{formatCurrency(s.profit)}</td>
                       <td><span style={{ color: m >= 20 ? 'var(--accent-green)' : 'var(--accent-gold)', fontSize: '0.82rem', fontWeight: 600 }}>{m}%</span></td>
-                      <td style={{ color: 'var(--text-secondary)' }}>{s.customerName || '—'}</td>
+                      <td style={{ color: 'var(--text-secondary)' }}>{s.quality || '—'}</td>
                       <td style={{ color: 'var(--text-muted)' }}>{formatDate(s.date)}</td>
                     </tr>
                   );
@@ -206,10 +210,10 @@ export default function Reports() {
           </div>
           {filteredSales.length > 0 && (
             <div style={{ padding: '12px 20px', borderTop: '1px solid var(--border-color)', display: 'flex', gap: '24px', fontSize: '0.82rem', flexWrap: 'wrap' }}>
-              <span style={{ color: 'var(--text-muted)' }}>Total:</span>
-              <span><span style={{ color: 'var(--text-muted)' }}>Revenue </span><strong style={{ color: 'var(--accent-gold)' }}>{formatCurrency(summary.revenue)}</strong></span>
-              <span><span style={{ color: 'var(--text-muted)' }}>Cost </span><strong style={{ color: 'var(--text-secondary)' }}>{formatCurrency(summary.cost)}</strong></span>
-              <span><span style={{ color: 'var(--text-muted)' }}>Profit </span><strong style={{ color: 'var(--accent-green)' }}>{formatCurrency(summary.profit)}</strong></span>
+              <span style={{ color: 'var(--text-muted)' }}>{t('reports.total')}</span>
+              <span><span style={{ color: 'var(--text-muted)' }}>{t('reports.revenue')} </span><strong style={{ color: 'var(--accent-gold)' }}>{formatCurrency(summary.revenue)}</strong></span>
+              <span><span style={{ color: 'var(--text-muted)' }}>{t('reports.cost')} </span><strong style={{ color: 'var(--text-secondary)' }}>{formatCurrency(summary.cost)}</strong></span>
+              <span><span style={{ color: 'var(--text-muted)' }}>{t('reports.profit')} </span><strong style={{ color: 'var(--accent-green)' }}>{formatCurrency(summary.profit)}</strong></span>
             </div>
           )}
         </div>
