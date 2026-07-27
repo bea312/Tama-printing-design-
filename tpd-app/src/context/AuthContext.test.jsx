@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { AuthProvider, useAuth } from './AuthContext';
+import { addEmployee } from '../services/teamService';
 
 // A small helper component that exercises the auth context
 function AuthTestUI() {
@@ -21,6 +22,13 @@ function AuthTestUI() {
       <button onClick={logout}>Logout</button>
     </>
   );
+}
+
+// A login form for an arbitrary email/password, used to test employee logins
+function LoginAsUI({ email, password }) {
+  const { user, login } = useAuth();
+  if (!user) return <button onClick={() => login(email, password)}>Employee Login</button>;
+  return <p>Employee session: {user.name} ({user.role})</p>;
 }
 
 const renderAuth = () =>
@@ -102,5 +110,44 @@ describe('AuthContext', () => {
     await screen.findByText(/Logged in as:/);
     const users = JSON.parse(localStorage.getItem('tpd_users'));
     expect(users).toHaveLength(1);
+  });
+
+  it('logs in as an employee created by an admin, with role "employee"', async () => {
+    // Create the admin account and log it out (employees are created out-of-band by the admin)
+    renderAuth();
+    await screen.findByText('Not logged in');
+    await userEvent.click(screen.getByText('Login OK'));
+    await screen.findByText(/Logged in as:/);
+    await userEvent.click(screen.getByText('Logout'));
+    await screen.findByText('Not logged in');
+
+    addEmployee('admin@tpd.com', { email: 'staff@tpd.com', password: 'staffpass', name: 'Staff One' });
+
+    const { getByText, findByText } = render(
+      <AuthProvider>
+        <LoginAsUI email="staff@tpd.com" password="staffpass" />
+      </AuthProvider>
+    );
+    await userEvent.click(getByText('Employee Login'));
+    expect(await findByText('Employee session: Staff One (employee)')).toBeInTheDocument();
+  });
+
+  it('rejects an employee login with the wrong password', async () => {
+    renderAuth();
+    await screen.findByText('Not logged in');
+    await userEvent.click(screen.getByText('Login OK'));
+    await screen.findByText(/Logged in as:/);
+    await userEvent.click(screen.getByText('Logout'));
+    await screen.findByText('Not logged in');
+
+    addEmployee('admin@tpd.com', { email: 'staff2@tpd.com', password: 'correctpass', name: 'Staff Two' });
+
+    const { getByText, queryByText } = render(
+      <AuthProvider>
+        <LoginAsUI email="staff2@tpd.com" password="wrongpass" />
+      </AuthProvider>
+    );
+    await userEvent.click(getByText('Employee Login'));
+    expect(queryByText(/Employee session:/)).not.toBeInTheDocument();
   });
 });

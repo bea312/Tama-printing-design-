@@ -1,26 +1,34 @@
 import { useState, useMemo } from 'react';
-import { Search, Trash2, TrendingDown, ShoppingCart } from 'lucide-react';
+import { Search, Trash2, Edit2, TrendingDown, ShoppingCart, Download } from 'lucide-react';
 import Header from '../components/common/Header';
 import Modal from '../components/common/Modal';
 import ConfirmDialog from '../components/common/ConfirmDialog';
 import { useApp } from '../context/AppContext';
+import { useAuth } from '../context/AuthContext';
 import { useLanguage } from '../context/LanguageContext';
-import { recordSale, deleteSale } from '../services/salesService';
+import { recordSale, updateSale, deleteSale, getSalePayment } from '../services/salesService';
+import { exportSales } from '../services/exportService';
 import { formatCurrency, formatDate } from '../utils/helpers';
 
 const today = () => new Date().toISOString().slice(0, 10);
 
 export default function StockOut() {
   const { products, sales, refresh, addToast } = useApp();
+  const { user } = useAuth();
   const { t } = useLanguage();
+  const isEmployee = user?.role === 'employee';
   const [search, setSearch] = useState('');
   const [modal, setModal] = useState(false);
   const [confirmId, setConfirmId] = useState(null);
-  const [form, setForm] = useState({ productId: '', quantity: '', quality: '', remark: '', paymentMethod: 'cash', amountPaid: '', date: today() });
+  const [editingSale, setEditingSale] = useState(null);
+  const [form, setForm] = useState({ productId: '', quantity: '', quality: '', remark: '', cashAmount: '', momoAmount: '', date: today() });
   const [errors, setErrors] = useState({});
 
   const availableProducts = products.filter((p) => p.quantity > 0);
   const selectedProduct = products.find((p) => p.id === form.productId);
+  const editableStockCap = selectedProduct
+    ? selectedProduct.quantity + (editingSale && editingSale.productId === selectedProduct.id ? editingSale.quantity : 0)
+    : 0;
 
   const filtered = useMemo(() => {
     const q = search.toLowerCase();
@@ -30,8 +38,25 @@ export default function StockOut() {
   }, [sales, search]);
 
   const openModal = () => {
+    setEditingSale(null);
     const firstAvail = availableProducts[0];
-    setForm({ productId: firstAvail?.id || '', quantity: '', quality: '', remark: '', paymentMethod: 'cash', amountPaid: '', date: today() });
+    setForm({ productId: firstAvail?.id || '', quantity: '', quality: '', remark: '', cashAmount: '', momoAmount: '', date: today() });
+    setErrors({});
+    setModal(true);
+  };
+
+  const openEdit = (s) => {
+    const { cashAmount, momoAmount } = getSalePayment(s);
+    setEditingSale(s);
+    setForm({
+      productId: s.productId,
+      quantity: s.quantity,
+      quality: s.quality || '',
+      remark: s.remark || '',
+      cashAmount: cashAmount || '',
+      momoAmount: momoAmount || '',
+      date: s.date.slice(0, 10),
+    });
     setErrors({});
     setModal(true);
   };
@@ -40,8 +65,8 @@ export default function StockOut() {
     const e = {};
     if (!form.productId) e.productId = 'Select a product';
     if (!form.quantity || Number(form.quantity) <= 0) e.quantity = 'Enter valid quantity';
-    if (selectedProduct && Number(form.quantity) > selectedProduct.quantity)
-      e.quantity = `Only ${selectedProduct.quantity} available`;
+    if (selectedProduct && Number(form.quantity) > editableStockCap)
+      e.quantity = `Only ${editableStockCap} available`;
     setErrors(e);
     return Object.keys(e).length === 0;
   };
@@ -49,9 +74,15 @@ export default function StockOut() {
   const handleSave = () => {
     if (!validate()) return;
     try {
-      const sale = recordSale(form);
-      refresh();
-      addToast(`${t('stockOut.saleRecorded')} ${formatCurrency(sale.profit)}`, 'success');
+      if (editingSale) {
+        updateSale(editingSale.id, form);
+        refresh();
+        addToast(t('stockOut.saleUpdated'), 'success');
+      } else {
+        const sale = recordSale(form);
+        refresh();
+        addToast(isEmployee ? t('stockOut.saleRecordedPlain') : `${t('stockOut.saleRecorded')} ${formatCurrency(sale.profit)}`, 'success');
+      }
       setModal(false);
     } catch (err) {
       addToast(err.message, 'error');
@@ -67,16 +98,18 @@ export default function StockOut() {
   const totalRevenue = sales.reduce((s, x) => s + x.totalRevenue, 0);
   const totalProfit = sales.reduce((s, x) => s + x.profit, 0);
 
+  const stats = [
+    { label: t('stockOut.totalSales'), value: sales.length, color: 'var(--brand-blue-light)' },
+    { label: t('stockOut.totalRevenue'), value: formatCurrency(totalRevenue), color: 'var(--accent-gold)' },
+    ...(isEmployee ? [] : [{ label: t('stockOut.totalProfit'), value: formatCurrency(totalProfit), color: 'var(--accent-green)' }]),
+  ];
+
   return (
     <div>
       <Header title={t('stockOut.title')} subtitle={t('stockOut.subtitle')} />
       <div className="page-wrapper">
-        <div className="grid-3" style={{ marginBottom: '24px' }}>
-          {[
-            { label: t('stockOut.totalSales'), value: sales.length, color: 'var(--brand-blue-light)' },
-            { label: t('stockOut.totalRevenue'), value: formatCurrency(totalRevenue), color: 'var(--accent-gold)' },
-            { label: t('stockOut.totalProfit'), value: formatCurrency(totalProfit), color: 'var(--accent-green)' },
-          ].map((s) => (
+        <div className={`grid-${stats.length}`} style={{ marginBottom: '24px' }}>
+          {stats.map((s) => (
             <div key={s.label} className="card" style={{ padding: '18px 20px' }}>
               <div style={{ fontSize: '0.72rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--text-muted)', marginBottom: '6px' }}>{s.label}</div>
               <div style={{ fontSize: '1.4rem', fontWeight: 800, fontFamily: 'Poppins', color: s.color }}>{s.value}</div>
@@ -91,9 +124,16 @@ export default function StockOut() {
               <input placeholder={t('stockOut.searchPlaceholder')} value={search} onChange={(e) => setSearch(e.target.value)} />
             </div>
           </div>
-          <button className="btn btn-danger" onClick={openModal} disabled={availableProducts.length === 0}>
-            <TrendingDown size={16} /> {t('stockOut.recordSale')}
-          </button>
+          <div style={{ display: 'flex', gap: '8px' }}>
+            {isEmployee && (
+              <button className="btn btn-ghost" onClick={() => exportSales(filtered, 'excel', { includeProfit: false })}>
+                <Download size={14} /> {t('reports.salesExcel')}
+              </button>
+            )}
+            <button className="btn btn-danger" onClick={openModal} disabled={availableProducts.length === 0}>
+              <TrendingDown size={16} /> {t('stockOut.recordSale')}
+            </button>
+          </div>
         </div>
 
         {availableProducts.length === 0 && products.length > 0 && (
@@ -112,7 +152,7 @@ export default function StockOut() {
                   <th>{t('stockOut.qtySold')}</th>
                   <th>{t('stockOut.unitPrice')}</th>
                   <th>{t('stockOut.revenue')}</th>
-                  <th>{t('stockOut.profit')}</th>
+                  {!isEmployee && <th>{t('stockOut.profit')}</th>}
                   <th>{t('stockOut.quality')}</th>
                   <th>{t('stockOut.payment')}</th>
                   <th>{t('stockOut.amountPaid')}</th>
@@ -123,12 +163,11 @@ export default function StockOut() {
               </thead>
               <tbody>
                 {filtered.length === 0 ? (
-                  <tr><td colSpan={12}>
+                  <tr><td colSpan={isEmployee ? 11 : 12}>
                     <div className="empty-state"><ShoppingCart size={40} /><h3>{t('stockOut.noSalesRecorded')}</h3><p>{t('stockOut.recordFirstSale')}</p></div>
                   </td></tr>
                 ) : filtered.map((s) => {
-                  const paid = s.amountPaid ?? s.totalRevenue;
-                  const balance = s.totalRevenue - paid;
+                  const { cashAmount, momoAmount, paid, balance } = getSalePayment(s);
                   return (
                   <tr key={s.id}>
                     <td style={{ fontWeight: 600 }}>{s.productName}</td>
@@ -136,9 +175,14 @@ export default function StockOut() {
                     <td><span style={{ color: 'var(--accent-red)', fontWeight: 700 }}>-{s.quantity}</span></td>
                     <td style={{ color: 'var(--text-secondary)' }}>{formatCurrency(s.sellPrice)}</td>
                     <td style={{ color: 'var(--accent-gold)', fontWeight: 600 }}>{formatCurrency(s.totalRevenue)}</td>
-                    <td style={{ color: 'var(--accent-green)', fontWeight: 700 }}>{formatCurrency(s.profit)}</td>
+                    {!isEmployee && <td style={{ color: 'var(--accent-green)', fontWeight: 700 }}>{formatCurrency(s.profit)}</td>}
                     <td style={{ color: 'var(--text-secondary)' }}>{s.quality || '—'}</td>
-                    <td><span className={`badge ${s.paymentMethod === 'momo' ? 'badge-gold' : 'badge-green'}`}>{s.paymentMethod === 'momo' ? t('stockOut.momo') : t('stockOut.cash')}</span></td>
+                    <td>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
+                        {cashAmount > 0 && <span className="badge badge-green">{t('stockOut.cash')} {formatCurrency(cashAmount)}</span>}
+                        {momoAmount > 0 && <span className="badge badge-gold">{t('stockOut.momo')} {formatCurrency(momoAmount)}</span>}
+                      </div>
+                    </td>
                     <td style={{ color: 'var(--text-secondary)' }}>{formatCurrency(paid)}</td>
                     <td>
                       {balance > 0
@@ -150,9 +194,15 @@ export default function StockOut() {
                     <td style={{ color: 'var(--text-muted)' }}>{formatDate(s.date)}</td>
                     <td>
                       <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
-                        <button className="btn btn-ghost btn-icon btn-sm" onClick={() => setConfirmId(s.id)} style={{ color: 'var(--accent-red-light)' }}>
-                          <Trash2 size={14} />
-                        </button>
+                        {isEmployee ? (
+                          <button className="btn btn-ghost btn-icon btn-sm" onClick={() => openEdit(s)} title={t('common.edit')}>
+                            <Edit2 size={14} />
+                          </button>
+                        ) : (
+                          <button className="btn btn-ghost btn-icon btn-sm" onClick={() => setConfirmId(s.id)} style={{ color: 'var(--accent-red-light)' }}>
+                            <Trash2 size={14} />
+                          </button>
+                        )}
                       </div>
                     </td>
                   </tr>
@@ -167,16 +217,20 @@ export default function StockOut() {
         </div>
       </div>
 
-      <Modal isOpen={modal} onClose={() => setModal(false)} title={t('stockOut.recordSale')}>
+      <Modal isOpen={modal} onClose={() => setModal(false)} title={editingSale ? t('stockOut.editSale') : t('stockOut.recordSale')}>
         <div className="form-group">
           <label className="form-label">{t('stockIn.product')}</label>
           <select
             className="form-select"
             value={form.productId}
+            disabled={!!editingSale}
             onChange={(e) => setForm({ ...form, productId: e.target.value, quantity: '' })}
           >
             <option value="">{t('stockOut.selectProduct')}</option>
-            {availableProducts.map((p) => (
+            {(editingSale && !availableProducts.some((p) => p.id === editingSale.productId)
+              ? [...availableProducts, products.find((p) => p.id === editingSale.productId)].filter(Boolean)
+              : availableProducts
+            ).map((p) => (
               <option key={p.id} value={p.id}>{p.name} — {p.quantity} in stock</option>
             ))}
           </select>
@@ -203,7 +257,7 @@ export default function StockOut() {
               className="form-input"
               type="number"
               min="1"
-              max={selectedProduct?.quantity}
+              max={editableStockCap || undefined}
               placeholder="1"
               value={form.quantity}
               onChange={(e) => setForm({ ...form, quantity: e.target.value })}
@@ -222,13 +276,16 @@ export default function StockOut() {
               <span style={{ color: 'var(--text-secondary)' }}>{t('stockOut.totalRevenueLabel')}</span>
               <span style={{ color: 'var(--accent-gold)', fontWeight: 700 }}>{formatCurrency(selectedProduct.sellPrice * Number(form.quantity))}</span>
             </div>
-            <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '4px' }}>
-              <span style={{ color: 'var(--text-secondary)' }}>{t('stockOut.profitLabel')}</span>
-              <span style={{ color: 'var(--accent-green)', fontWeight: 700 }}>{formatCurrency((selectedProduct.sellPrice - selectedProduct.buyPrice) * Number(form.quantity))}</span>
-            </div>
-            {form.amountPaid !== '' && (() => {
+            {!isEmployee && (
+              <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '4px' }}>
+                <span style={{ color: 'var(--text-secondary)' }}>{t('stockOut.profitLabel')}</span>
+                <span style={{ color: 'var(--accent-green)', fontWeight: 700 }}>{formatCurrency((selectedProduct.sellPrice - selectedProduct.buyPrice) * Number(form.quantity))}</span>
+              </div>
+            )}
+            {(form.cashAmount !== '' || form.momoAmount !== '') && (() => {
               const total = selectedProduct.sellPrice * Number(form.quantity);
-              const balance = total - Number(form.amountPaid);
+              const paid = (Number(form.cashAmount) || 0) + (Number(form.momoAmount) || 0);
+              const balance = total - paid;
               return (
                 <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '4px' }}>
                   <span style={{ color: 'var(--text-secondary)' }}>{t('stockOut.balance')}</span>
@@ -243,25 +300,29 @@ export default function StockOut() {
 
         <div className="grid-2">
           <div className="form-group">
-            <label className="form-label">{t('stockOut.paymentMethod')}</label>
-            <select className="form-select" value={form.paymentMethod} onChange={(e) => setForm({ ...form, paymentMethod: e.target.value })}>
-              <option value="cash">{t('stockOut.cash')}</option>
-              <option value="momo">{t('stockOut.momo')}</option>
-            </select>
-          </div>
-          <div className="form-group">
-            <label className="form-label">{t('stockOut.amountPaid')}</label>
+            <label className="form-label">{t('stockOut.cashAmount')}</label>
             <input
               className="form-input"
               type="number"
               min="0"
-              placeholder={selectedProduct && form.quantity ? String(selectedProduct.sellPrice * Number(form.quantity)) : '0'}
-              value={form.amountPaid}
-              onChange={(e) => setForm({ ...form, amountPaid: e.target.value })}
+              placeholder="0"
+              value={form.cashAmount}
+              onChange={(e) => setForm({ ...form, cashAmount: e.target.value })}
             />
-            <span style={{ color: 'var(--text-muted)', fontSize: '0.72rem' }}>{t('stockOut.leaveBlankFullyPaid')}</span>
+          </div>
+          <div className="form-group">
+            <label className="form-label">{t('stockOut.momoAmount')}</label>
+            <input
+              className="form-input"
+              type="number"
+              min="0"
+              placeholder="0"
+              value={form.momoAmount}
+              onChange={(e) => setForm({ ...form, momoAmount: e.target.value })}
+            />
           </div>
         </div>
+        <span style={{ color: 'var(--text-muted)', fontSize: '0.72rem', display: 'block', marginTop: '-8px', marginBottom: '12px' }}>{t('stockOut.leaveBlankFullyPaid')}</span>
         <div className="grid-2">
           <div className="form-group">
             <label className="form-label">{t('stockOut.quality')}</label>
@@ -275,7 +336,7 @@ export default function StockOut() {
 
         <div className="modal-footer">
           <button className="btn btn-ghost" onClick={() => setModal(false)}>{t('common.cancel')}</button>
-          <button className="btn btn-danger" onClick={handleSave}>{t('stockOut.recordSale')}</button>
+          <button className="btn btn-danger" onClick={handleSave}>{editingSale ? t('common.save') : t('stockOut.recordSale')}</button>
         </div>
       </Modal>
 

@@ -1,0 +1,38 @@
+rules_version = '2';
+
+// Paste this into Firebase Console -> Firestore Database -> Rules (or deploy with the
+// Firebase CLI: `firebase deploy --only firestore:rules`, if this project is linked).
+//
+// Data model:
+//   accounts/{ownerEmail}   -> { products: [], sales: [], purchases: [], expenses: [] }
+//   employees/{employeeEmail} -> { email, name, ownerEmail, role, createdAt }
+//
+// An admin's own account doc is readable/writable only by them, or by an authenticated
+// employee whose `employees/{their email}` doc points ownerEmail at that account.
+// An employee doc is readable by the employee themself or their owner; only the owner
+// (the admin who created it) can create/delete it.
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function isOwner(ownerEmail) {
+      return request.auth != null && request.auth.token.email == ownerEmail;
+    }
+
+    function isEmployeeOf(ownerEmail) {
+      return request.auth != null &&
+        exists(/databases/$(database)/documents/employees/$(request.auth.token.email)) &&
+        get(/databases/$(database)/documents/employees/$(request.auth.token.email)).data.ownerEmail == ownerEmail;
+    }
+
+    match /accounts/{ownerEmail} {
+      allow read, write: if isOwner(ownerEmail) || isEmployeeOf(ownerEmail);
+    }
+
+    match /employees/{employeeEmail} {
+      allow read: if request.auth != null &&
+        (request.auth.token.email == employeeEmail || request.auth.token.email == resource.data.ownerEmail);
+      allow create: if request.auth != null && request.auth.token.email == request.resource.data.ownerEmail;
+      allow update, delete: if request.auth != null && request.auth.token.email == resource.data.ownerEmail;
+    }
+  }
+}

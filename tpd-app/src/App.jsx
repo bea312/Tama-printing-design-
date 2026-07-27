@@ -14,6 +14,7 @@ import StockIn from './pages/StockIn';
 import StockOut from './pages/StockOut';
 import Inventory from './pages/Inventory';
 import Expenses from './pages/Expenses';
+import Team from './pages/Team';
 import Reports from './pages/Reports';
 
 /* Loading screen shown while AuthContext reads localStorage */
@@ -35,22 +36,37 @@ function LoadingScreen() {
 }
 
 /* Layout shell — reads sidebarOpen so main-content margin stays in sync
-   with the sidebar's actual (expanded/collapsed) width */
+   with the sidebar's actual (expanded/collapsed) width.
+   Employees only get Stock Out + Expenses; everything else redirects there. */
 function AppShell() {
   const { sidebarOpen } = useApp();
+  const { user } = useAuth();
+  const isEmployee = user?.role === 'employee';
+
   return (
     <div className="app-layout">
       <Sidebar />
       <main className={`main-content${sidebarOpen ? '' : ' sidebar-collapsed'}`}>
         <Routes>
-          <Route path="/" element={<Dashboard />} />
-          <Route path="/products" element={<Products />} />
-          <Route path="/stock-in" element={<StockIn />} />
-          <Route path="/stock-out" element={<StockOut />} />
-          <Route path="/inventory" element={<Inventory />} />
-          <Route path="/expenses" element={<Expenses />} />
-          <Route path="/reports" element={<Reports />} />
-          <Route path="*" element={<Navigate to="/" replace />} />
+          {isEmployee ? (
+            <>
+              <Route path="/stock-out" element={<StockOut />} />
+              <Route path="/expenses" element={<Expenses />} />
+              <Route path="*" element={<Navigate to="/stock-out" replace />} />
+            </>
+          ) : (
+            <>
+              <Route path="/" element={<Dashboard />} />
+              <Route path="/products" element={<Products />} />
+              <Route path="/stock-in" element={<StockIn />} />
+              <Route path="/stock-out" element={<StockOut />} />
+              <Route path="/inventory" element={<Inventory />} />
+              <Route path="/expenses" element={<Expenses />} />
+              <Route path="/team" element={<Team />} />
+              <Route path="/reports" element={<Reports />} />
+              <Route path="*" element={<Navigate to="/" replace />} />
+            </>
+          )}
         </Routes>
       </main>
       <ToastContainer />

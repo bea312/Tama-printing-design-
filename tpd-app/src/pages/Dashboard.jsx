@@ -2,7 +2,7 @@ import { useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Package, TrendingUp, DollarSign, BarChart2,
-  AlertTriangle, ArrowRight, ShoppingCart, Warehouse,
+  AlertTriangle, ArrowRight, ShoppingCart, Warehouse, Wallet,
 } from 'lucide-react';
 import Header from '../components/common/Header';
 import StatCard from '../components/common/StatCard';
@@ -13,7 +13,7 @@ import { useLanguage } from '../context/LanguageContext';
 import { formatCurrency, formatDate, getStockStatus, filterByDateRange } from '../utils/helpers';
 
 export default function Dashboard() {
-  const { products, sales, salesSummary, totalStockValue, lowStockProducts } = useApp();
+  const { products, sales, salesSummary, expenseSummary, totalStockValue, lowStockProducts } = useApp();
   const { t } = useLanguage();
   const navigate = useNavigate();
 
@@ -44,6 +44,8 @@ export default function Dashboard() {
 
   const recentSales = useMemo(() => [...sales].sort((a, b) => new Date(b.date) - new Date(a.date)).slice(0, 5), [sales]);
 
+  const netProfit = salesSummary.totalProfit - expenseSummary.total;
+
   return (
     <div>
       <Header title={t('dashboard.title')} subtitle={t('dashboard.subtitle')} />
@@ -65,12 +67,17 @@ export default function Dashboard() {
           <StatCard label={t('dashboard.totalProducts')} value={products.length} icon={Package} color="blue" />
           <StatCard label={t('dashboard.totalSales')} value={salesSummary.count} icon={ShoppingCart} color="green" />
           <StatCard label={t('dashboard.totalRevenue')} value={formatCurrency(salesSummary.totalRevenue)} icon={DollarSign} color="gold" />
-          <StatCard label={t('dashboard.netProfit')} value={formatCurrency(salesSummary.totalProfit)} icon={TrendingUp} color="purple" />
+          <StatCard label={t('dashboard.profit')} value={formatCurrency(salesSummary.totalProfit)} icon={TrendingUp} color="purple" />
         </div>
 
         <div className="grid-2" style={{ marginBottom: '24px', gap: '20px' }}>
           <StatCard label={t('dashboard.stockValue')} value={formatCurrency(totalStockValue)} icon={Warehouse} color="cyan" />
           <StatCard label={t('dashboard.lowStockAlerts')} value={lowStockProducts.length} icon={AlertTriangle} color="red" />
+        </div>
+
+        <div className="grid-2" style={{ marginBottom: '24px', gap: '20px' }}>
+          <StatCard label={t('expenses.totalExpenses')} value={formatCurrency(expenseSummary.total)} icon={Wallet} color="red" />
+          <StatCard label={t('dashboard.netProfit')} value={formatCurrency(netProfit)} icon={TrendingUp} color={netProfit >= 0 ? 'green' : 'red'} />
         </div>
 
         {/* Charts row */}

@@ -1,8 +1,9 @@
-import { createContext, useContext, useState, useCallback } from 'react';
+import { createContext, useContext, useState, useCallback, useEffect } from 'react';
 import { getAllProducts } from '../services/productService';
 import { getAllSales, getSalesSummary } from '../services/salesService';
 import { getAllPurchases, getPurchaseSummary } from '../services/purchaseService';
 import { getAllExpenses, getExpenseSummary } from '../services/expenseService';
+import { onRemoteDataChange } from '../services/storage';
 
 const AppContext = createContext(null);
 
@@ -21,6 +22,13 @@ export function AppProvider({ children }) {
     setPurchases(getAllPurchases());
     setExpenses(getAllExpenses());
   }, []);
+
+  /* When cloud sync is on, another device writing under the same account pushes a
+     Firestore snapshot here — pull it into local state so this tab reflects it live. */
+  useEffect(() => {
+    onRemoteDataChange(refresh);
+    return () => onRemoteDataChange(null);
+  }, [refresh]);
 
   const addToast = useCallback((message, type = 'info', duration = 3500) => {
     const id = Date.now();

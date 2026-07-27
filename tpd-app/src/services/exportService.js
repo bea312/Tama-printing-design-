@@ -1,6 +1,7 @@
 import * as XLSX from 'xlsx';
 import { saveAs } from 'file-saver';
 import { formatDate } from '../utils/helpers';
+import { getSalePayment } from './salesService';
 
 export const exportToCSV = (data, filename) => {
   const ws = XLSX.utils.json_to_sheet(data);
@@ -18,22 +19,25 @@ export const exportToExcel = (data, filename, sheetName = 'Sheet1') => {
   saveAs(blob, `${filename}.xlsx`);
 };
 
-export const exportSales = (sales, format = 'excel') => {
-  const rows = sales.map((s) => ({
-    Date: formatDate(s.date),
-    Product: s.productName,
-    Category: s.category,
-    Qty: s.quantity,
-    'Unit Price (RWF)': s.sellPrice,
-    'Revenue (RWF)': s.totalRevenue,
-    'Cost (RWF)': s.totalCost,
-    'Profit (RWF)': s.profit,
-    Quality: s.quality || '',
-    Remark: s.remark || '',
-    Payment: s.paymentMethod === 'momo' ? 'MoMo' : 'Cash',
-    'Amount Paid (RWF)': s.amountPaid ?? s.totalRevenue,
-    'Balance (RWF)': s.totalRevenue - (s.amountPaid ?? s.totalRevenue),
-  }));
+export const exportSales = (sales, format = 'excel', { includeProfit = true } = {}) => {
+  const rows = sales.map((s) => {
+    const { cashAmount, momoAmount, paid, balance } = getSalePayment(s);
+    return {
+      Date: formatDate(s.date),
+      Product: s.productName,
+      Category: s.category,
+      Qty: s.quantity,
+      'Unit Price (RWF)': s.sellPrice,
+      'Revenue (RWF)': s.totalRevenue,
+      ...(includeProfit ? { 'Cost (RWF)': s.totalCost, 'Profit (RWF)': s.profit } : {}),
+      Quality: s.quality || '',
+      Remark: s.remark || '',
+      'Cash Paid (RWF)': cashAmount,
+      'MoMo Paid (RWF)': momoAmount,
+      'Amount Paid (RWF)': paid,
+      'Balance (RWF)': balance,
+    };
+  });
   const name = `TPD_Sales_${new Date().toISOString().slice(0, 10)}`;
   if (format === 'csv') exportToCSV(rows, name);
   else exportToExcel(rows, name, 'Sales');

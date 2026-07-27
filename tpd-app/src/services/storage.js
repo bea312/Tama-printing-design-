@@ -1,4 +1,6 @@
+import { doc, setDoc, onSnapshot } from 'firebase/firestore';
 import { generateId } from '../utils/helpers';
+import { db, firebaseEnabled, authReady } from './firebase';
 
 const KEYS = {
   PRODUCTS: 'tpd_products',
@@ -7,6 +9,7 @@ const KEYS = {
   EXPENSES: 'tpd_expenses',
   AUTH: 'tpd_auth',
   USERS: 'tpd_users',
+  EMPLOYEES: 'tpd_employees',
 };
 
 const get = (key) => {
@@ -28,27 +31,84 @@ const set = (key, value) => {
 
 /* Per-account data namespace — each email keeps its own products/sales/purchases */
 let accountNamespace = null;
-export const setActiveAccount = (email) => { accountNamespace = email || null; };
 const nsKey = (key) => (accountNamespace ? `${key}::${accountNamespace}` : key);
 
+/* --- Cloud sync (Firestore), only active once VITE_FIREBASE_* keys are configured ---
+   The local key/value store above stays the synchronous source of truth the rest of
+   the app reads from; Firestore is a write-through mirror plus a realtime listener that
+   pulls in changes made from another device/browser under the same account email. */
+const CLOUD_FIELDS = {
+  [KEYS.PRODUCTS]: 'products',
+  [KEYS.SALES]: 'sales',
+  [KEYS.PURCHASES]: 'purchases',
+  [KEYS.EXPENSES]: 'expenses',
+};
+
+let unsubscribeRemote = null;
+let onRemoteChangeCb = null;
+
+/* Registered by AppContext so it can refresh its state when data arrives from
+   another device. */
+export const onRemoteDataChange = (cb) => { onRemoteChangeCb = cb; };
+
+const syncRemote = (key, value) => {
+  const field = CLOUD_FIELDS[key];
+  if (!field || !firebaseEnabled || !accountNamespace) return;
+  setDoc(doc(db, 'accounts', accountNamespace), { [field]: value }, { merge: true })
+    .catch((e) => console.error('Cloud sync error:', e));
+};
+
+export const setActiveAccount = (email) => {
+  accountNamespace = email || null;
+  if (unsubscribeRemote) { unsubscribeRemote(); unsubscribeRemote = null; }
+  if (!firebaseEnabled || !accountNamespace) return;
+
+  const target = accountNamespace;
+  authReady.then(() => {
+    if (accountNamespace !== target) return; // account switched again before auth settled
+    unsubscribeRemote = onSnapshot(
+      doc(db, 'accounts', target),
+      (snap) => {
+        if (!snap.exists()) return;
+        const data = snap.data();
+        let changed = false;
+        Object.entries(CLOUD_FIELDS).forEach(([key, field]) => {
+          if (data[field] !== undefined) {
+            set(`${key}::${target}`, data[field]);
+            changed = true;
+          }
+        });
+        if (changed) onRemoteChangeCb?.();
+      },
+      (err) => console.error('Cloud sync listener error:', err)
+    );
+  });
+};
+
 export const getProducts = () => get(nsKey(KEYS.PRODUCTS)) || [];
-export const saveProducts = (products) => set(nsKey(KEYS.PRODUCTS), products);
+export const saveProducts = (products) => { set(nsKey(KEYS.PRODUCTS), products); syncRemote(KEYS.PRODUCTS, products); };
 
 export const getSales = () => get(nsKey(KEYS.SALES)) || [];
-export const saveSales = (sales) => set(nsKey(KEYS.SALES), sales);
+export const saveSales = (sales) => { set(nsKey(KEYS.SALES), sales); syncRemote(KEYS.SALES, sales); };
 
 export const getPurchases = () => get(nsKey(KEYS.PURCHASES)) || [];
-export const savePurchases = (purchases) => set(nsKey(KEYS.PURCHASES), purchases);
+export const savePurchases = (purchases) => { set(nsKey(KEYS.PURCHASES), purchases); syncRemote(KEYS.PURCHASES, purchases); };
 
 export const getExpenses = () => get(nsKey(KEYS.EXPENSES)) || [];
-export const saveExpenses = (expenses) => set(nsKey(KEYS.EXPENSES), expenses);
+export const saveExpenses = (expenses) => { set(nsKey(KEYS.EXPENSES), expenses); syncRemote(KEYS.EXPENSES, expenses); };
 
 export const getAuth = () => get(KEYS.AUTH);
 export const saveAuth = (auth) => set(KEYS.AUTH, auth);
 export const clearAuth = () => localStorage.removeItem(KEYS.AUTH);
 
+/* Local-only fallback account/employee directories, used when Firebase isn't
+   configured (AuthContext and teamService go straight to Firebase Auth/Firestore
+   for these when cloud sync is enabled). */
 export const getUsers = () => get(KEYS.USERS) || [];
 export const saveUsers = (users) => set(KEYS.USERS, users);
+
+export const getEmployees = () => get(KEYS.EMPLOYEES) || [];
+export const saveEmployees = (employees) => set(KEYS.EMPLOYEES, employees);
 
 /* Wipe all product/sales/purchase/expense data for the active account (keep auth & other accounts) */
 export const clearAllData = () => {
@@ -56,6 +116,10 @@ export const clearAllData = () => {
   localStorage.removeItem(nsKey(KEYS.SALES));
   localStorage.removeItem(nsKey(KEYS.PURCHASES));
   localStorage.removeItem(nsKey(KEYS.EXPENSES));
+  if (firebaseEnabled && accountNamespace) {
+    setDoc(doc(db, 'accounts', accountNamespace), { products: [], sales: [], purchases: [], expenses: [] }, { merge: true })
+      .catch((e) => console.error('Cloud sync error:', e));
+  }
 };
 
 export const seedDemoData = () => {

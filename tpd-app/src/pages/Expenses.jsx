@@ -127,7 +127,7 @@ export default function Expenses() {
                 ) : filtered.map((e) => (
                   <tr key={e.id}>
                     <td><span className="badge badge-red">{e.category}</span></td>
-                    <td style={{ color: 'var(--text-secondary)' }}>{e.remark || '—'}</td>
+cd
                     <td style={{ color: 'var(--accent-red-light)', fontWeight: 700 }}>{formatCurrency(e.amount)}</td>
                     <td style={{ color: 'var(--text-muted)' }}>{formatDate(e.date)}</td>
                     <td>

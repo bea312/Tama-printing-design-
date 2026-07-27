@@ -3,21 +3,27 @@ import { NavLink, useNavigate } from 'react-router-dom';
 import {
   LayoutDashboard, Package, TrendingUp, TrendingDown,
   Warehouse, BarChart3, LogOut, ChevronLeft, ChevronRight,
-  AlertTriangle, Printer, Trash2, Wallet,
+  AlertTriangle, Printer, Trash2, Wallet, Users,
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { useApp } from '../../context/AppContext';
 import { useLanguage } from '../../context/LanguageContext';
 import { clearAllData } from '../../services/storage';
 
-const NAV = [
+const NAV_ADMIN = [
   { to: '/', icon: LayoutDashboard, key: 'dashboard' },
   { to: '/products', icon: Package, key: 'products' },
   { to: '/stock-in', icon: TrendingUp, key: 'stockIn' },
   { to: '/stock-out', icon: TrendingDown, key: 'stockOut' },
   { to: '/inventory', icon: Warehouse, key: 'inventory' },
   { to: '/expenses', icon: Wallet, key: 'expenses' },
+  { to: '/team', icon: Users, key: 'team' },
   { to: '/reports', icon: BarChart3, key: 'reports' },
+];
+
+const NAV_EMPLOYEE = [
+  { to: '/stock-out', icon: TrendingDown, key: 'stockOut' },
+  { to: '/expenses', icon: Wallet, key: 'expenses' },
 ];
 
 export default function Sidebar() {
@@ -26,6 +32,8 @@ export default function Sidebar() {
   const { t } = useLanguage();
   const navigate = useNavigate();
   const [confirmClear, setConfirmClear] = useState(false);
+  const isAdmin = user?.role !== 'employee';
+  const NAV = isAdmin ? NAV_ADMIN : NAV_EMPLOYEE;
 
   const handleClearData = () => {
     clearAllData();
@@ -165,7 +173,7 @@ export default function Sidebar() {
         </nav>
 
         {/* Low stock alert */}
-        {sidebarOpen && lowStockProducts.length > 0 && (
+        {isAdmin && sidebarOpen && lowStockProducts.length > 0 && (
           <div style={{
             margin: '0 8px 8px',
             padding: '10px 12px',
@@ -189,8 +197,8 @@ export default function Sidebar() {
             </div>
           )}
 
-          {/* Clear all data */}
-          {!confirmClear ? (
+          {/* Clear all data — admin only */}
+          {isAdmin && (!confirmClear ? (
             <button
               onClick={() => setConfirmClear(true)}
               title={t('common.clearAllData')}
@@ -218,7 +226,7 @@ export default function Sidebar() {
                 </div>
               </div>
             )
-          )}
+          ))}
 
           <button
             onClick={handleLogout}

@@ -3,7 +3,7 @@ import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip,
   ResponsiveContainer, Legend, LineChart, Line,
 } from 'recharts';
-import { Download, BarChart3, TrendingUp, DollarSign, ShoppingCart } from 'lucide-react';
+import { Download, BarChart3, TrendingUp, DollarSign, ShoppingCart, Wallet } from 'lucide-react';
 import Header from '../components/common/Header';
 import { useApp } from '../context/AppContext';
 import { useLanguage } from '../context/LanguageContext';
@@ -35,16 +35,18 @@ const ChartTooltip = ({ active, payload, label }) => {
 };
 
 export default function Reports() {
-  const { sales, purchases } = useApp();
+  const { sales, purchases, expenses } = useApp();
   const { t } = useLanguage();
   const [range, setRange] = useState('month');
 
   const filteredSales = useMemo(() => filterByDateRange(sales, range), [sales, range]);
   const filteredPurchases = useMemo(() => filterByDateRange(purchases, range), [purchases, range]);
+  const filteredExpenses = useMemo(() => filterByDateRange(expenses, range), [expenses, range]);
 
   const summary = useMemo(() => {
     const revenue = filteredSales.reduce((s, x) => s + x.totalRevenue, 0);
     const profit = filteredSales.reduce((s, x) => s + x.profit, 0);
+    const expensesTotal = filteredExpenses.reduce((s, x) => s + x.amount, 0);
     return {
       revenue,
       cost: filteredSales.reduce((s, x) => s + x.totalCost, 0),
@@ -52,8 +54,10 @@ export default function Reports() {
       salesCount: filteredSales.length,
       purchased: filteredPurchases.reduce((s, x) => s + x.totalCost, 0),
       margin: revenue > 0 ? Math.round((profit / revenue) * 100) : 0,
+      expensesTotal,
+      netProfit: profit - expensesTotal,
     };
-  }, [filteredSales, filteredPurchases]);
+  }, [filteredSales, filteredPurchases, filteredExpenses]);
 
   /* Group sales by date for chart */
   const dailyData = useMemo(() => {
@@ -109,7 +113,7 @@ export default function Reports() {
         </div>
 
         {/* KPI row */}
-        <div className="grid-4" style={{ marginBottom: '24px' }}>
+        <div className="grid-4" style={{ marginBottom: '16px' }}>
           {[
             { label: t('reports.revenue'), value: formatCurrency(summary.revenue), icon: DollarSign, color: 'gold' },
             { label: t('reports.profit'), value: formatCurrency(summary.profit), icon: TrendingUp, color: 'green' },
@@ -122,6 +126,19 @@ export default function Reports() {
               <div className="stat-value" style={{ fontSize: '1.4rem' }}>{k.value}</div>
             </div>
           ))}
+        </div>
+
+        <div className="grid-2" style={{ marginBottom: '24px' }}>
+          <div className="stat-card red">
+            <div className="stat-icon red"><Wallet size={20} /></div>
+            <div className="stat-label">{t('expenses.totalExpenses')}</div>
+            <div className="stat-value" style={{ fontSize: '1.4rem' }}>{formatCurrency(summary.expensesTotal)}</div>
+          </div>
+          <div className={`stat-card ${summary.netProfit >= 0 ? 'green' : 'red'}`}>
+            <div className={`stat-icon ${summary.netProfit >= 0 ? 'green' : 'red'}`}><TrendingUp size={20} /></div>
+            <div className="stat-label">{t('dashboard.netProfit')}</div>
+            <div className="stat-value" style={{ fontSize: '1.4rem' }}>{formatCurrency(summary.netProfit)}</div>
+          </div>
         </div>
 
         {/* Revenue & Profit trend */}
@@ -214,6 +231,8 @@ export default function Reports() {
               <span><span style={{ color: 'var(--text-muted)' }}>{t('reports.revenue')} </span><strong style={{ color: 'var(--accent-gold)' }}>{formatCurrency(summary.revenue)}</strong></span>
               <span><span style={{ color: 'var(--text-muted)' }}>{t('reports.cost')} </span><strong style={{ color: 'var(--text-secondary)' }}>{formatCurrency(summary.cost)}</strong></span>
               <span><span style={{ color: 'var(--text-muted)' }}>{t('reports.profit')} </span><strong style={{ color: 'var(--accent-green)' }}>{formatCurrency(summary.profit)}</strong></span>
+              <span><span style={{ color: 'var(--text-muted)' }}>{t('expenses.totalExpenses')} </span><strong style={{ color: 'var(--accent-red-light)' }}>{formatCurrency(summary.expensesTotal)}</strong></span>
+              <span><span style={{ color: 'var(--text-muted)' }}>{t('dashboard.netProfit')} </span><strong style={{ color: summary.netProfit >= 0 ? 'var(--accent-green)' : 'var(--accent-red-light)' }}>{formatCurrency(summary.netProfit)}</strong></span>
             </div>
           )}
         </div>

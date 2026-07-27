@@ -16,7 +16,7 @@ export const translations = {
     },
     nav: {
       navigation: 'Navigation', dashboard: 'Dashboard', products: 'Products', stockIn: 'Stock In',
-      stockOut: 'Stock Out', inventory: 'Inventory', expenses: 'Operating Expenses', reports: 'Reports',
+      stockOut: 'Stock Out', inventory: 'Inventory', expenses: 'Operating Expenses', team: 'Team', reports: 'Reports',
     },
     login: {
       welcome: 'Welcome', tagline: 'Stock Management System', backToHome: 'Back to home',
@@ -97,8 +97,10 @@ export const translations = {
       remark: 'Remark', deleteSaleTitle: 'Delete Sale Record',
       deleteSaleMessage: 'Delete this sale record? Note: this does NOT restore the stock quantity.',
       saleRecorded: 'Sale recorded — Profit:', saleDeleted: 'Sale record deleted',
+      saleRecordedPlain: 'Sale recorded', saleUpdated: 'Sale updated', editSale: 'Edit Sale',
       paymentMethod: 'Payment Method', payment: 'Payment', cash: 'Cash', momo: 'MoMo',
-      amountPaid: 'Amount Paid (RWF)', leaveBlankFullyPaid: 'Leave blank if paid in full',
+      cashAmount: 'Cash Amount (RWF)', momoAmount: 'MoMo Amount (RWF)',
+      amountPaid: 'Amount Paid (RWF)', leaveBlankFullyPaid: 'Leave both blank if paid in full by cash',
       balance: 'Balance', paidInFull: 'Paid', owes: 'Owes', change: 'Change',
     },
     inventory: {
@@ -132,6 +134,14 @@ export const translations = {
       deleteExpenseMessage: 'Delete this expense record? This cannot be undone.',
       expenseAdded: 'Expense added', expenseUpdated: 'Expense updated', expenseDeleted: 'Expense deleted',
     },
+    team: {
+      title: 'Team', subtitle: 'Manage employee logins — they only see Stock Out and Expenses',
+      membersCount: 'team members', addEmployee: 'Add Employee', name: 'Name',
+      noEmployeesYet: 'No employees yet', addFirstEmployee: 'Add your first employee above',
+      employeeAccessNote: 'Employees can only record sales (Stock Out) and log expenses — they share your shop’s products and stock, but can’t see Dashboard, Products, Stock In, Inventory, Team, or Reports.',
+      employeeAdded: 'Employee added', employeeRemoved: 'Employee removed',
+      removeEmployeeTitle: 'Remove Employee', removeEmployeeMessage: 'Remove this employee? They will no longer be able to log in.',
+    },
     theme: { dark: 'Dark', light: 'Light' },
   },
 
@@ -146,7 +156,7 @@ export const translations = {
     },
     nav: {
       navigation: 'Navigation', dashboard: 'Tableau de bord', products: 'Produits', stockIn: 'Entrée stock',
-      stockOut: 'Sortie stock', inventory: 'Inventaire', expenses: "Charges d'exploitation", reports: 'Rapports',
+      stockOut: 'Sortie stock', inventory: 'Inventaire', expenses: "Charges d'exploitation", team: 'Équipe', reports: 'Rapports',
     },
     login: {
       welcome: 'Bienvenue', tagline: 'Système de gestion de stock', backToHome: "Retour à l'accueil",
@@ -227,8 +237,10 @@ export const translations = {
       remark: 'Remarque', deleteSaleTitle: 'Supprimer la vente',
       deleteSaleMessage: 'Supprimer cette vente ? Cela ne restaure PAS la quantité en stock.',
       saleRecorded: 'Vente enregistrée — Bénéfice :', saleDeleted: 'Vente supprimée',
+      saleRecordedPlain: 'Vente enregistrée', saleUpdated: 'Vente mise à jour', editSale: 'Modifier la vente',
       paymentMethod: 'Mode de paiement', payment: 'Paiement', cash: 'Espèces', momo: 'MoMo',
-      amountPaid: 'Montant payé (RWF)', leaveBlankFullyPaid: 'Laissez vide si payé intégralement',
+      cashAmount: 'Montant en espèces (RWF)', momoAmount: 'Montant MoMo (RWF)',
+      amountPaid: 'Montant payé (RWF)', leaveBlankFullyPaid: 'Laissez les deux vides si payé intégralement en espèces',
       balance: 'Solde', paidInFull: 'Payé', owes: 'Doit', change: 'Monnaie',
     },
     inventory: {
@@ -262,6 +274,14 @@ export const translations = {
       deleteExpenseMessage: 'Supprimer cette charge ? Cette action est irréversible.',
       expenseAdded: 'Charge ajoutée', expenseUpdated: 'Charge mise à jour', expenseDeleted: 'Charge supprimée',
     },
+    team: {
+      title: 'Équipe', subtitle: "Gérez les comptes employés — ils ne voient que Sortie stock et Charges",
+      membersCount: 'membres de l\'équipe', addEmployee: 'Ajouter un employé', name: 'Nom',
+      noEmployeesYet: "Aucun employé pour l'instant", addFirstEmployee: 'Ajoutez votre premier employé ci-dessus',
+      employeeAccessNote: "Les employés peuvent uniquement enregistrer des ventes (Sortie stock) et des charges — ils partagent les produits et le stock de votre boutique, mais ne voient pas le Tableau de bord, les Produits, l'Entrée stock, l'Inventaire, l'Équipe ni les Rapports.",
+      employeeAdded: 'Employé ajouté', employeeRemoved: 'Employé supprimé',
+      removeEmployeeTitle: "Supprimer l'employé", removeEmployeeMessage: 'Supprimer cet employé ? Il ne pourra plus se connecter.',
+    },
     theme: { dark: 'Sombre', light: 'Clair' },
   },
 
@@ -277,7 +297,7 @@ export const translations = {
     nav: {
       navigation: 'Ibyerekezo', dashboard: 'Imbonerahamwe', products: 'Ibicuruzwa', stockIn: 'Kwinjiza Stock',
       stockOut: 'Gusohora Stock', inventory: 'Ubwoba bw\'Ibintu', expenses: 'Amafaranga y\'Imikorere',
-      reports: 'Raporo',
+      team: 'Itsinde', reports: 'Raporo',
     },
     login: {
       welcome: 'Murakaza neza', tagline: 'Sisitemu yo Gucunga Stock', backToHome: 'Subira ahabanza',
@@ -358,8 +378,10 @@ export const translations = {
       remark: 'Icyo wongeraho', deleteSaleTitle: 'Siba icyanditswe cy\'igurisha',
       deleteSaleMessage: 'Gusiba iki gurisha? Ntibisubiza umubare wa stock.',
       saleRecorded: 'Igurisha ryanditswe — Inyungu:', saleDeleted: 'Icyanditswe cy\'igurisha cyasibwe',
+      saleRecordedPlain: 'Igurisha ryanditswe', saleUpdated: 'Igurisha ryahinduwe', editSale: 'Hindura Igurisha',
       paymentMethod: 'Uburyo bwo Kwishyura', payment: 'Kwishyura', cash: 'Amafaranga', momo: 'MoMo',
-      amountPaid: 'Amafaranga Yishyuwe (RWF)', leaveBlankFullyPaid: 'Reka ubusa niba byishyuwe byose',
+      cashAmount: 'Amafaranga Y\'Ibiceri (RWF)', momoAmount: 'Amafaranga ya MoMo (RWF)',
+      amountPaid: 'Amafaranga Yishyuwe (RWF)', leaveBlankFullyPaid: 'Reka ubusa byombi niba byishyuwe byose mu mafaranga y\'ibiceri',
       balance: 'Amasigazwa', paidInFull: 'Yishyuye', owes: 'Aracyafite', change: 'Amasigano',
     },
     inventory: {
@@ -392,6 +414,14 @@ export const translations = {
       records: 'ibyanditswe', deleteExpenseTitle: 'Siba igiciro',
       deleteExpenseMessage: 'Gusiba iki giciro? Ibi ntibishobora gusubizwa inyuma.',
       expenseAdded: 'Igiciro cyongewemo', expenseUpdated: 'Igiciro cyahinduwe', expenseDeleted: 'Igiciro cyasibwe',
+    },
+    team: {
+      title: 'Itsinde', subtitle: 'Cunga abakozi binjira muri sisitemu — babona gusa Gusohora Stock n\'Amafaranga y\'Imikorere',
+      membersCount: 'abakozi', addEmployee: 'Ongeraho Umukozi', name: 'Izina',
+      noEmployeesYet: 'Nta mukozi warahandikwa', addFirstEmployee: 'Ongeraho umukozi wawe wa mbere hejuru',
+      employeeAccessNote: 'Abakozi bashobora gusa kwandika ibyagurishijwe (Gusohora Stock) n\'amafaranga yakoreshejwe — babona ibicuruzwa na stock by\'ubucuruzi bwawe, ariko ntibabona Imbonerahamwe, Ibicuruzwa, Kwinjiza Stock, Ubwoba bw\'Ibintu, Itsinde, cyangwa Raporo.',
+      employeeAdded: 'Umukozi yongewemo', employeeRemoved: 'Umukozi yakuweho',
+      removeEmployeeTitle: 'Kuraho Umukozi', removeEmployeeMessage: 'Kuraho uyu mukozi? Ntazongera kwinjira muri sisitemu.',
     },
     theme: { dark: 'Umwijima', light: 'Urumuri' },
   },

@@ -5,6 +5,7 @@ import {
   recordSale,
   deleteSale,
   getSalesSummary,
+  getSalePayment,
 } from './salesService';
 
 // Utility: create a stocked product and return it
@@ -32,7 +33,7 @@ describe('recordSale', () => {
       productId: product.id,
       quantity: 5,
       quality: 'Grade A',
-      paymentMethod: 'momo',
+      momoAmount: 15000,
       date: new Date().toISOString(),
     });
 
@@ -60,9 +61,18 @@ describe('recordSale', () => {
 
   it('records a partial payment when amountPaid is less than the total', () => {
     const product = seedProduct({ sellPrice: 3000 });
-    const sale = recordSale({ productId: product.id, quantity: 4, amountPaid: 5000 });
+    const sale = recordSale({ productId: product.id, quantity: 4, cashAmount: 5000 });
     expect(sale.amountPaid).toBe(5000);
     expect(sale.totalRevenue - sale.amountPaid).toBe(7000); // still owes 7000
+  });
+
+  it('splits a payment across cash and momo', () => {
+    const product = seedProduct({ sellPrice: 3000 });
+    const sale = recordSale({ productId: product.id, quantity: 4, cashAmount: 7000, momoAmount: 5000 });
+    expect(sale.cashAmount).toBe(7000);
+    expect(sale.momoAmount).toBe(5000);
+    expect(sale.amountPaid).toBe(12000);
+    expect(sale.paymentMethod).toBe('split');
   });
 
   it('calculates revenue, cost, and profit correctly', () => {
@@ -107,6 +117,23 @@ describe('recordSale', () => {
     recordSale({ productId: product.id, quantity: 2 });
     recordSale({ productId: product.id, quantity: 3 });
     expect(getAllSales()).toHaveLength(3);
+  });
+});
+
+describe('getSalePayment', () => {
+  it('reads the split cash/momo amounts directly off a new-style sale', () => {
+    const sale = { totalRevenue: 10000, amountPaid: 10000, cashAmount: 6000, momoAmount: 4000, paymentMethod: 'split' };
+    expect(getSalePayment(sale)).toEqual({ cashAmount: 6000, momoAmount: 4000, paid: 10000, balance: 0 });
+  });
+
+  it('derives an all-cash breakdown for old-style records with no cashAmount/momoAmount', () => {
+    const sale = { totalRevenue: 5000, amountPaid: 5000, paymentMethod: 'cash' };
+    expect(getSalePayment(sale)).toEqual({ cashAmount: 5000, momoAmount: 0, paid: 5000, balance: 0 });
+  });
+
+  it('derives an all-momo breakdown for old-style momo records', () => {
+    const sale = { totalRevenue: 5000, amountPaid: 3000, paymentMethod: 'momo' };
+    expect(getSalePayment(sale)).toEqual({ cashAmount: 0, momoAmount: 3000, paid: 3000, balance: 2000 });
   });
 });
 
