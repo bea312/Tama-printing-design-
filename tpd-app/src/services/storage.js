@@ -1,4 +1,4 @@
-import { doc, setDoc, onSnapshot } from 'firebase/firestore';
+import { doc, setDoc, getDoc, onSnapshot } from 'firebase/firestore';
 import { generateId } from '../utils/helpers';
 import { db, firebaseEnabled, authReady } from './firebase';
 
@@ -64,10 +64,37 @@ export const setActiveAccount = (email) => {
   if (!firebaseEnabled || !accountNamespace) return;
 
   const target = accountNamespace;
-  authReady.then(() => {
+  authReady.then(async () => {
     if (accountNamespace !== target) return; // account switched again before auth settled
+    const ref = doc(db, 'accounts', target);
+
+    // If the cloud has nothing yet for this account, seed it from whatever this
+    // device already has locally (e.g. data entered before cloud sync was turned on,
+    // or before this account ever logged in from another device). Without this, a
+    // brand-new device logging in second would just see an empty account forever,
+    // since the listener below only ever pulls the cloud's current state.
+    try {
+      const snap = await getDoc(ref);
+      const remote = snap.exists() ? snap.data() : {};
+      const remoteHasData = Object.values(CLOUD_FIELDS).some(
+        (field) => Array.isArray(remote[field]) && remote[field].length > 0
+      );
+      if (!remoteHasData) {
+        const localData = {};
+        Object.entries(CLOUD_FIELDS).forEach(([key, field]) => {
+          localData[field] = get(`${key}::${target}`) || [];
+        });
+        if (Object.values(localData).some((arr) => arr.length > 0)) {
+          await setDoc(ref, localData, { merge: true });
+        }
+      }
+    } catch (e) {
+      console.error('Cloud seed error:', e);
+    }
+
+    if (accountNamespace !== target) return;
     unsubscribeRemote = onSnapshot(
-      doc(db, 'accounts', target),
+      ref,
       (snap) => {
         if (!snap.exists()) return;
         const data = snap.data();
